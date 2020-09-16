@@ -1,0 +1,392 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: FormKiQ - Parima
+
+Parameters:
+
+  HostedZone:
+    Type: String
+  DomainName:
+    Type: String
+
+  WebsiteVersion:
+    Type: String
+    Description: Version website to deploy
+    AllowedPattern: ".+"
+    Default: "v1"
+
+Conditions:
+  HasCertificate: !And [!Not [ !Equals [ !Ref HostedZone, "" ]], !Not [ !Equals [ !Ref DomainName, "" ]]]
+  NoCertificate: !Or [!Equals [ !Ref HostedZone, "" ], !Equals [ !Ref DomainName, "" ]]
+
+Resources:
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      Tags:
+        - Key: "Application"
+          Value: "FormKiQ Website"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+
+  S3BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties: 
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement: 
+        - 
+          Action: 
+            - "s3:GetObject"
+          Effect: "Allow"
+          Resource: 
+            Fn::Join: 
+              - ""
+              - 
+                -  !GetAtt S3Bucket.Arn
+                - "/*"
+          Principal:
+            CanonicalUser: !GetAtt CloudFrontOriginAccessIdentity.S3CanonicalUserId
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Condition: NoCertificate
+    Properties:
+      DistributionConfig:
+        Origins:
+        - DomainName: !GetAtt S3Bucket.DomainName
+          Id: s3origin
+          OriginPath: !Sub "/${WebsiteVersion}"
+          S3OriginConfig:
+            OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}'
+        DefaultCacheBehavior:
+          Compress: true
+          DefaultTTL: 600
+          MaxTTL: 600
+          MinTTL: 0
+          ForwardedValues:
+            QueryString: false
+          TargetOriginId: s3origin
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        Enabled: true
+        HttpVersion: http2
+        ViewerCertificate:
+          MinimumProtocolVersion: TLSv1.1_2016
+          CloudFrontDefaultCertificate: true
+      Tags:
+        - Key: "Application"
+          Value: "FormKiQ Parima"
+
+  CloudFrontRoute53:
+    Type: AWS::Route53::RecordSet
+    Condition: HasCertificate
+    Properties:
+      Name: !Ref DomainName
+      HostedZoneName: !Ref HostedZone
+      Type: A
+      AliasTarget:
+        HostedZoneId: Z2FDTNDATAQYW2
+        DNSName: !GetAtt CloudFrontCertificateDistribution.DomainName
+
+  CloudFrontCertificateDistribution:
+    Type: AWS::CloudFront::Distribution
+    Condition: HasCertificate
+    Properties:
+      DistributionConfig:
+        Origins:
+        - DomainName: !GetAtt S3Bucket.DomainName
+          Id: s3origin
+          OriginPath: !Sub "/${WebsiteVersion}"
+          S3OriginConfig:
+            OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}'
+        DefaultCacheBehavior:
+          Compress: true
+          DefaultTTL: 600
+          MaxTTL: 600
+          MinTTL: 0
+          ForwardedValues:
+            QueryString: false
+          TargetOriginId: s3origin
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        Enabled: true
+        HttpVersion: http2
+        Aliases:
+        - !Ref DomainName
+        ViewerCertificate:
+          MinimumProtocolVersion: TLSv1.1_2016
+          SslSupportMethod: sni-only
+          AcmCertificateArn: !Ref Certificate
+      Tags:
+        - Key: "Application"
+          Value: "FormKiQ Parima"
+
+  CloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: 'CloudFront for Parima'
+
+  # Create an IAM user with Access Keys to enable automated deployment of the website to this bucket
+  PublishUser:
+    Type: 'AWS::IAM::User'
+
+  PublishGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      Policies:
+      - PolicyName: !Sub 'publish-to-${S3Bucket}'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:ListBucket
+            Resource:
+            - !Sub 'arn:aws:s3:::${S3Bucket}'            
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:ListObjectsV2
+            Resource:
+            - !Sub 'arn:aws:s3:::${S3Bucket}'
+            - !Sub 'arn:aws:s3:::${S3Bucket}/*'
+
+  AddPublishUserToPublishGroup:
+    Type: AWS::IAM::UserToGroupAddition
+    Properties:
+      GroupName: !Ref PublishGroup
+      Users:
+      - !Ref PublishUser
+
+  PublishCredentials:
+    Type: 'AWS::IAM::AccessKey'
+    Properties:
+      UserName: !Ref PublishUser
+
+  Certificate:
+    Condition: HasCertificate
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      SubjectAlternativeNames:
+        - !Sub "*.${DomainName}"
+      ValidationMethod: DNS
+
+  CertificateValidationResource:
+    Condition: HasCertificate
+    Type: Custom::CertValidation
+    Properties:
+      ServiceToken: !GetAtt CertificateValidationLambda.Arn
+      HostedZoneName: !Ref HostedZone
+      StackName: !Ref 'AWS::StackName'
+
+  DefaultSiteResource:
+    Type: Custom::DefaultSite
+    Properties:
+      ServiceToken: !GetAtt DefaultSiteLambda.Arn
+
+  DefaultSiteLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:ListObjectsV2
+            Resource:
+            - !Sub 'arn:aws:s3:::${S3Bucket}/*'
+
+  DefaultSiteLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: nodejs12.x
+      Timeout: '300'
+      Handler: index.handler
+      Role: !GetAtt DefaultSiteLambdaRole.Arn
+      Environment:
+        Variables:
+          S3_BUCKET: !Ref S3Bucket
+          WEBSITE_VERSION: !Ref WebsiteVersion
+      Code:
+        ZipFile: |
+          const AWS=require("aws-sdk"),https=require("https"),fs=require("fs");var s3=new AWS.S3({apiVersion:"2006-03-01"});function upload(e){const s=e.split("/").pop();return new Promise((e,o)=>{console.log("Uploading "+s+" to "+process.env.S3_BUCKET);let t=getContentTypeByFile(s),n={Bucket:process.env.S3_BUCKET,Key:process.env.WEBSITE_VERSION+"/"+s,Body:fs.createReadStream("/tmp/"+s),ContentType:t};s3.putObject(n,function(t,n){t?(console.log(t),o(t)):e(s)})})}function download(e){const s=e.split("/").pop(),o=fs.createWriteStream("/tmp/"+s);return new Promise((s,t)=>{https.get(e,e=>{200===e.statusCode?e.pipe(o):(o.close(),t(`Server responded with ${e.statusCode}: ${e.statusMessage}`))}).on("error",e=>{o.close(),t(e.message)}),o.on("finish",()=>{console.log("downloaded "+e),s("downloaded "+e)})})}function sendResponse(e,s,o,t){var n=require("https"),a=require("url");console.log("Sending response "+o);var r=JSON.stringify({Status:o,Reason:"See the details in CloudWatch Log Stream: "+s.logStreamName,PhysicalResourceId:e.StackId+"-"+e.LogicalResourceId,StackId:e.StackId,RequestId:e.RequestId,LogicalResourceId:e.LogicalResourceId,Data:t});console.log("RESPONSE BODY:\n",r);var l=a.parse(e.ResponseURL),i={hostname:l.hostname,port:443,path:l.path,method:"PUT",headers:{"content-type":"","content-length":r.length}};return console.log("SENDING RESPONSE...\n"),new Promise(function(e,s){var o=n.request(i,s=>{s.setEncoding("utf8"),console.log("statusCode:",s.statusCode),console.log("headers:",s.headers);let o="";s.on("data",e=>{o+=e}),s.on("end",()=>{console.log("response status: "+s.statusCode),console.log("response body: "+o),e([o,s.statusCode,s.headers])})}).on("error",s=>{let o=JSON.stringify(s);console.log("unable to send message"),console.log(o),e([{message:"Unable to send message"},502,null])}).on("timeout",()=>{console.log("request timeout"),e([{message:"Request has timed out"},502,null])});o.write(r),o.end()})}function getContentTypeByFile(e){var s="application/octet-stream",o=e.toLowerCase();return o.indexOf(".html")>=0?s="text/html":o.indexOf(".css")>=0?s="text/css":o.indexOf(".json")>=0?s="application/json":o.indexOf(".js")>=0?s="application/x-javascript":o.indexOf(".png")>=0?s="image/png":o.indexOf(".jpg")>=0&&(s="image/jpg"),s}module.exports.handler=(async(e,s)=>{var o=[];const t=["https://parima.s3.amazonaws.com/placeholder/index.html","https://parima.s3.amazonaws.com/placeholder/parima.png"];if(null!=e.RequestType){if("Create"===e.RequestType){for(let e of t)o.push(download(e));await Promise.all(o);var n=[];for(let e of t)n.push(upload(e));await Promise.all(n)}return"Create"===e.RequestType||"Delete"===e.RequestType||"Upload"===e.RequestType?sendResponse(e,s,"SUCCESS",{Message:"Resource "+e.RequestType+" successful!"}):sendResponse(e,s,"FAILED")}});
+
+  CertificateValidationLambdaRole:
+    Condition: HasCertificate
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - route53:ChangeResourceRecordSets
+              - route53:ListHostedZonesByName
+              - cloudformation:DescribeStackEvents
+            Resource: '*'
+
+  CertificateValidationLambda:
+    Condition: HasCertificate
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.6
+      Timeout: '300'
+      Handler: index.handler
+      Role: !GetAtt CertificateValidationLambdaRole.Arn
+      Code:
+        ZipFile: |
+          #!/usr/bin/env python3
+
+          import cfnresponse
+          import boto3
+          import re
+          import time
+
+
+          def get_zone_id_from_name(zone_name):
+              r53 = boto3.client('route53')
+              r = r53.list_hosted_zones_by_name(DNSName=zone_name)
+              for hz in r['HostedZones']:
+                  return hz['Id']
+
+
+          def get_stack_cert_event(stack_name):
+              cfn = boto3.client('cloudformation')
+              params = {'StackName': stack_name}
+              event = None
+              while True:
+                  r = cfn.describe_stack_events(**params)
+                  for e in r['StackEvents']:
+                      if (
+                          e['ResourceType'] == 'AWS::CertificateManager::Certificate' and
+                          e['ResourceStatus'] == 'CREATE_IN_PROGRESS' and
+                          'ResourceStatusReason' in e and
+                          'Content of DNS Record' in e['ResourceStatusReason']
+                      ):
+                          event = e
+                  if 'NextToken' in r:
+                      params['NextToken'] = r['NextToken']
+                  else:
+                      break
+              return event
+
+
+          def parse_event(event):
+              reason = event['ResourceStatusReason']
+              m = re.search(r'\{Name\: (.+),\s?Type\: (.+),\s?Value\: (.+)\}', reason)
+              if m:
+                  dns = {
+                      'Name': m.group(1),
+                      'Type': m.group(2),
+                      'Value': m.group(3)
+                  }
+                  return dns
+              return None
+
+
+          def upsert(hosted_zone_id, dns_record):
+              r53 = boto3.client('route53')
+              r53.change_resource_record_sets(
+                  HostedZoneId=hosted_zone_id,
+                  ChangeBatch={
+                      'Changes': [{
+                          'Action': 'UPSERT',
+                          'ResourceRecordSet': {
+                              'Name': dns_record['Name'],
+                              'Type': dns_record['Type'],
+                              'TTL': 60,
+                              'ResourceRecords': [{
+                                  'Value': dns_record['Value']
+                              }]
+                          }
+                      }]
+                  }
+              )
+
+
+          def handler(event, context):
+              try:
+                  if event['RequestType'] == 'Create':
+                      cert_event = None
+                      while cert_event is None:
+                          cert_event = get_stack_cert_event(
+                            event['ResourceProperties']['StackName'])
+                          time.sleep(5)
+                      dns_record = parse_event(cert_event)
+                      if dns_record:
+                          hosted_zone_id = get_zone_id_from_name(
+                              event['ResourceProperties']['HostedZoneName'])
+                          upsert(hosted_zone_id, dns_record)
+              except Exception as e:
+                  print(e)
+              finally:
+                  if 'Offline' not in event['ResourceProperties']:
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+
+
+          if __name__ == '__main__':
+              event = {
+                  'ResourceProperties': {
+                      'HostedZoneName': 'x.x.x',
+                      'Offline': True
+                  }
+              }
+              handler(event, None)
+
+Outputs:
+  AccessKeyId:
+    Description: 'S3 Access Key'
+    Value: !Ref PublishCredentials
+  AccessKeySecret:
+    Description: 'S3 Secret Key'
+    Value: !GetAtt PublishCredentials.SecretAccessKey
+  WebsiteUrl:
+    Description: 'Website Url'
+    Value: !If [HasCertificate, !Sub "https://${DomainName}", !Sub "https://${CloudFrontDistribution.DomainName}"]
+  S3Bucket:
+    Description: 'S3 Bucket'
+    Value: !Ref S3Bucket
+  SyncCommand:
+    Description: 'Sync Current Directory to S3'
+    Value: !Sub "aws s3 sync . s3://${S3Bucket}/${WebsiteVersion}"    
