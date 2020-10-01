@@ -1,13 +1,16 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: FormKiQ - Parima
+Description: Parima - Launch Your Website using AWS in Minutes (https://github.com/formkiq/parima)
 
 Parameters:
 
   HostedZone:
     Type: String
+    Description: Optional. Required for custom domains - see https://console.aws.amazon.com/route53/v2/HostedZones
+    Default: ''
   DomainName:
     Type: String
-
+    Description: Optional. Required for custom domain, e.g. www.yourcompany.com
+    Default: ''
   WebsiteVersion:
     Type: String
     Description: Version website to deploy
@@ -22,11 +25,12 @@ Resources:
 
   S3Bucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
     Properties:
       AccessControl: Private
       Tags:
         - Key: "Application"
-          Value: "FormKiQ Website"
+          Value: "Parima"
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         IgnorePublicAcls: true
@@ -59,7 +63,7 @@ Resources:
     Properties:
       DistributionConfig:
         Origins:
-        - DomainName: !GetAtt S3Bucket.DomainName
+        - DomainName: !GetAtt S3Bucket.RegionalDomainName
           Id: s3origin
           OriginPath: !Sub "/${WebsiteVersion}"
           S3OriginConfig:
@@ -81,14 +85,14 @@ Resources:
           CloudFrontDefaultCertificate: true
       Tags:
         - Key: "Application"
-          Value: "FormKiQ Parima"
+          Value: "Parima"
 
   CloudFrontRoute53:
     Type: AWS::Route53::RecordSet
     Condition: HasCertificate
     Properties:
       Name: !Ref DomainName
-      HostedZoneName: !Ref HostedZone
+      HostedZoneName: !Sub "${HostedZone}."
       Type: A
       AliasTarget:
         HostedZoneId: Z2FDTNDATAQYW2
@@ -96,11 +100,13 @@ Resources:
 
   CloudFrontCertificateDistribution:
     Type: AWS::CloudFront::Distribution
+    DependsOn:
+    - Certificate
     Condition: HasCertificate
     Properties:
       DistributionConfig:
         Origins:
-        - DomainName: !GetAtt S3Bucket.DomainName
+        - DomainName: !GetAtt S3Bucket.RegionalDomainName
           Id: s3origin
           OriginPath: !Sub "/${WebsiteVersion}"
           S3OriginConfig:
@@ -122,16 +128,16 @@ Resources:
         ViewerCertificate:
           MinimumProtocolVersion: TLSv1.1_2016
           SslSupportMethod: sni-only
-          AcmCertificateArn: !Ref Certificate
+          AcmCertificateArn: !GetAtt Certificate.CertificateArn
       Tags:
         - Key: "Application"
-          Value: "FormKiQ Parima"
+          Value: "Parima"
 
   CloudFrontOriginAccessIdentity:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
     Properties:
       CloudFrontOriginAccessIdentityConfig:
-        Comment: 'CloudFront for Parima'
+        Comment: !Sub 'CloudFront for Parima ${S3Bucket}'
 
   # Create an IAM user with Access Keys to enable automated deployment of the website to this bucket
   PublishUser:
@@ -171,23 +177,6 @@ Resources:
     Properties:
       UserName: !Ref PublishUser
 
-  Certificate:
-    Condition: HasCertificate
-    Type: AWS::CertificateManager::Certificate
-    Properties:
-      DomainName: !Ref DomainName
-      SubjectAlternativeNames:
-        - !Sub "*.${DomainName}"
-      ValidationMethod: DNS
-
-  CertificateValidationResource:
-    Condition: HasCertificate
-    Type: Custom::CertValidation
-    Properties:
-      ServiceToken: !GetAtt CertificateValidationLambda.Arn
-      HostedZoneName: !Ref HostedZone
-      StackName: !Ref 'AWS::StackName'
-
   DefaultSiteResource:
     Type: Custom::DefaultSite
     Properties:
@@ -216,6 +205,9 @@ Resources:
             - s3:GetObject
             - s3:PutObject
             - s3:ListObjectsV2
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
             Resource:
             - !Sub 'arn:aws:s3:::${S3Bucket}/*'
 
@@ -234,9 +226,18 @@ Resources:
         ZipFile: |
           const AWS=require("aws-sdk"),https=require("https"),fs=require("fs");var s3=new AWS.S3({apiVersion:"2006-03-01"});function upload(e){const s=e.split("/").pop();return new Promise((e,o)=>{console.log("Uploading "+s+" to "+process.env.S3_BUCKET);let t=getContentTypeByFile(s),n={Bucket:process.env.S3_BUCKET,Key:process.env.WEBSITE_VERSION+"/"+s,Body:fs.createReadStream("/tmp/"+s),ContentType:t};s3.putObject(n,function(t,n){t?(console.log(t),o(t)):e(s)})})}function download(e){const s=e.split("/").pop(),o=fs.createWriteStream("/tmp/"+s);return new Promise((s,t)=>{https.get(e,e=>{200===e.statusCode?e.pipe(o):(o.close(),t(`Server responded with ${e.statusCode}: ${e.statusMessage}`))}).on("error",e=>{o.close(),t(e.message)}),o.on("finish",()=>{console.log("downloaded "+e),s("downloaded "+e)})})}function sendResponse(e,s,o,t){var n=require("https"),a=require("url");console.log("Sending response "+o);var r=JSON.stringify({Status:o,Reason:"See the details in CloudWatch Log Stream: "+s.logStreamName,PhysicalResourceId:e.StackId+"-"+e.LogicalResourceId,StackId:e.StackId,RequestId:e.RequestId,LogicalResourceId:e.LogicalResourceId,Data:t});console.log("RESPONSE BODY:\n",r);var l=a.parse(e.ResponseURL),i={hostname:l.hostname,port:443,path:l.path,method:"PUT",headers:{"content-type":"","content-length":r.length}};return console.log("SENDING RESPONSE...\n"),new Promise(function(e,s){var o=n.request(i,s=>{s.setEncoding("utf8"),console.log("statusCode:",s.statusCode),console.log("headers:",s.headers);let o="";s.on("data",e=>{o+=e}),s.on("end",()=>{console.log("response status: "+s.statusCode),console.log("response body: "+o),e([o,s.statusCode,s.headers])})}).on("error",s=>{let o=JSON.stringify(s);console.log("unable to send message"),console.log(o),e([{message:"Unable to send message"},502,null])}).on("timeout",()=>{console.log("request timeout"),e([{message:"Request has timed out"},502,null])});o.write(r),o.end()})}function getContentTypeByFile(e){var s="application/octet-stream",o=e.toLowerCase();return o.indexOf(".html")>=0?s="text/html":o.indexOf(".css")>=0?s="text/css":o.indexOf(".json")>=0?s="application/json":o.indexOf(".js")>=0?s="application/x-javascript":o.indexOf(".png")>=0?s="image/png":o.indexOf(".jpg")>=0&&(s="image/jpg"),s}module.exports.handler=(async(e,s)=>{var o=[];const t=["https://parima.s3.amazonaws.com/placeholder/index.html","https://parima.s3.amazonaws.com/placeholder/parima.png"];if(null!=e.RequestType){if("Create"===e.RequestType){for(let e of t)o.push(download(e));await Promise.all(o);var n=[];for(let e of t)n.push(upload(e));await Promise.all(n)}return"Create"===e.RequestType||"Delete"===e.RequestType||"Upload"===e.RequestType?sendResponse(e,s,"SUCCESS",{Message:"Resource "+e.RequestType+" successful!"}):sendResponse(e,s,"FAILED")}});
 
-  CertificateValidationLambdaRole:
+  Certificate:
+    Type: Custom::Certificate
     Condition: HasCertificate
+    Properties:
+      ServiceToken: !GetAtt CertificateLambda.Arn
+      DomainName: !Ref DomainName
+      HostedZoneName: !Ref HostedZone
+      StackName: !Ref 'AWS::StackName'
+
+  CertificateLambdaRole:
     Type: AWS::IAM::Role
+    Condition: HasCertificate
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -255,126 +256,35 @@ Resources:
           Statement:
           - Effect: Allow
             Action:
-              - logs:CreateLogGroup
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Resource: '*'
-          - Effect: Allow
-            Action:
-              - route53:ChangeResourceRecordSets
-              - route53:ListHostedZonesByName
-              - cloudformation:DescribeStackEvents
+            - acm:DeleteCertificate
+            - acm:RequestCertificate
+            - acm:AddTagsToCertificate
+            - acm:DescribeCertificate            
+            - route53:ChangeResourceRecordSets
+            - route53:ListHostedZonesByName
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - cloudformation:DescribeStacks
             Resource: '*'
 
-  CertificateValidationLambda:
-    Condition: HasCertificate
+  CertificateLambda:
     Type: AWS::Lambda::Function
+    Condition: HasCertificate
     Properties:
-      Runtime: python3.6
+      Runtime: nodejs12.x
       Timeout: '300'
       Handler: index.handler
-      Role: !GetAtt CertificateValidationLambdaRole.Arn
+      Role: !GetAtt CertificateLambdaRole.Arn
       Code:
         ZipFile: |
-          #!/usr/bin/env python3
-
-          import cfnresponse
-          import boto3
-          import re
-          import time
-
-
-          def get_zone_id_from_name(zone_name):
-              r53 = boto3.client('route53')
-              r = r53.list_hosted_zones_by_name(DNSName=zone_name)
-              for hz in r['HostedZones']:
-                  return hz['Id']
-
-
-          def get_stack_cert_event(stack_name):
-              cfn = boto3.client('cloudformation')
-              params = {'StackName': stack_name}
-              event = None
-              while True:
-                  r = cfn.describe_stack_events(**params)
-                  for e in r['StackEvents']:
-                      if (
-                          e['ResourceType'] == 'AWS::CertificateManager::Certificate' and
-                          e['ResourceStatus'] == 'CREATE_IN_PROGRESS' and
-                          'ResourceStatusReason' in e and
-                          'Content of DNS Record' in e['ResourceStatusReason']
-                      ):
-                          event = e
-                  if 'NextToken' in r:
-                      params['NextToken'] = r['NextToken']
-                  else:
-                      break
-              return event
-
-
-          def parse_event(event):
-              reason = event['ResourceStatusReason']
-              m = re.search(r'\{Name\: (.+),\s?Type\: (.+),\s?Value\: (.+)\}', reason)
-              if m:
-                  dns = {
-                      'Name': m.group(1),
-                      'Type': m.group(2),
-                      'Value': m.group(3)
-                  }
-                  return dns
-              return None
-
-
-          def upsert(hosted_zone_id, dns_record):
-              r53 = boto3.client('route53')
-              r53.change_resource_record_sets(
-                  HostedZoneId=hosted_zone_id,
-                  ChangeBatch={
-                      'Changes': [{
-                          'Action': 'UPSERT',
-                          'ResourceRecordSet': {
-                              'Name': dns_record['Name'],
-                              'Type': dns_record['Type'],
-                              'TTL': 60,
-                              'ResourceRecords': [{
-                                  'Value': dns_record['Value']
-                              }]
-                          }
-                      }]
-                  }
-              )
-
-
-          def handler(event, context):
-              try:
-                  if event['RequestType'] == 'Create':
-                      cert_event = None
-                      while cert_event is None:
-                          cert_event = get_stack_cert_event(
-                            event['ResourceProperties']['StackName'])
-                          time.sleep(5)
-                      dns_record = parse_event(cert_event)
-                      if dns_record:
-                          hosted_zone_id = get_zone_id_from_name(
-                              event['ResourceProperties']['HostedZoneName'])
-                          upsert(hosted_zone_id, dns_record)
-              except Exception as e:
-                  print(e)
-              finally:
-                  if 'Offline' not in event['ResourceProperties']:
-                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
-
-
-          if __name__ == '__main__':
-              event = {
-                  'ResourceProperties': {
-                      'HostedZoneName': 'x.x.x',
-                      'Offline': True
-                  }
-              }
-              handler(event, None)
+          const AWS=require("aws-sdk");var acm=new AWS.ACM({region:"us-east-1"}),route53=new AWS.Route53,cloudformation=new AWS.CloudFormation;const sleep=e=>new Promise(t=>setTimeout(t,e));async function findHostedZoneId(e){return new Promise((t,o)=>{var a={DNSName:e};route53.listHostedZonesByName(a,function(e,a){e?o(e):t(a.HostedZones[0].Id)})})}async function updateRoute53(e,t){let o=await findHostedZoneId(e),a=[];for(let n of t.Certificate.DomainValidationOptions)if(n.ResourceRecord&&n.ResourceRecord.Name){var i={ChangeBatch:{Changes:[{Action:"UPSERT",ResourceRecordSet:{Name:n.ResourceRecord.Name,ResourceRecords:[{Value:n.ResourceRecord.Value}],TTL:60,Type:n.ResourceRecord.Type}}]},HostedZoneId:o};a.push(route53.changeResourceRecordSets(i).promise())}else console.log("Missing DNS Record, going to sleep and will try again"),a.push(sleep(1e4).then(()=>updateRoute53(e,t)));return Promise.all(a)}async function waitForValidation(e){return acm.waitFor("certificateValidated",{CertificateArn:e}).promise()}async function findCertificateArn(e){var t={StackName:e};return new Promise((e,o)=>{cloudformation.describeStacks(t,function(t,a){if(t)o(t);else{var i="";for(let e of a.Stacks[0].Outputs)"Certificate"==e.OutputKey&&(i=e.OutputValue);e(i)}})})}async function deleteCertificate(e){return console.log("deleting certificate "+e),acm.deleteCertificate({CertificateArn:e}).promise()}async function describeCertificate(e){return acm.describeCertificate({CertificateArn:e}).promise()}async function createCertificate(e,t){var o={DomainName:t,DomainValidationOptions:[{DomainName:t,ValidationDomain:e}],SubjectAlternativeNames:["*."+t],Tags:[{Key:"Application",Value:"Parima"}],ValidationMethod:"DNS"};return acm.requestCertificate(o).promise()}async function sendResponse(e,t,o,a){var i=require("https"),n=require("url"),r=JSON.stringify({Status:o,Reason:"See the details in CloudWatch Log Stream: "+t.logStreamName,PhysicalResourceId:e.StackId+"-"+e.LogicalResourceId,StackId:e.StackId,RequestId:e.RequestId,LogicalResourceId:e.LogicalResourceId,Data:a}),s=n.parse(e.ResponseURL),c={hostname:s.hostname,port:443,path:s.path,method:"PUT",headers:{"content-type":"","content-length":r.length}};return new Promise(function(e,t){var o=i.request(c,t=>{t.setEncoding("utf8");let o="";t.on("data",e=>{o+=e}),t.on("end",()=>{e([o,t.statusCode,t.headers])})}).on("error",t=>{JSON.stringify(t);e([{message:"Unable to send message"},502,null])}).on("timeout",()=>{e([{message:"Request has timed out"},502,null])});o.write(r),o.end()})}module.exports.handler=(async(e,t)=>{if(console.log(JSON.stringify(e)),null!=e.RequestType){if("Create"===e.RequestType){let o=e.ResourceProperties.DomainName,a=e.ResourceProperties.HostedZoneName;return createCertificate(a,o).then(e=>(console.log("created certificate "+e.CertificateArn),describeCertificate(e.CertificateArn))).then(e=>(console.log("adding certificate verification DNS entries"),updateRoute53(a,e),e.Certificate)).then(e=>(console.log("waiting DNS to be updated so certificate can be validated"),waitForValidation(e.CertificateArn))).then(o=>sendResponse(e,t,"SUCCESS",{CertificateArn:o.Certificate.CertificateArn})).catch(o=>(console.log("error "+o),sendResponse(e,t,"FAILED")))}if("Delete"===e.RequestType){return findCertificateArn(e.ResourceProperties.StackName).then(e=>deleteCertificate(e)).then(o=>sendResponse(e,t,"SUCCESS",{})).catch(o=>sendResponse(e,t,"SUCCESS"))}return"Update"===e.RequestType?sendResponse(e,t,"SUCCESS",{}):sendResponse(e,t,"FAILED")}});
 
 Outputs:
+  Certificate:
+    Condition: HasCertificate
+    Description: 'Certificate'
+    Value: !GetAtt Certificate.CertificateArn
   AccessKeyId:
     Description: 'S3 Access Key'
     Value: !Ref PublishCredentials

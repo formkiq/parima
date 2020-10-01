@@ -25,11 +25,7 @@ module.exports.handler = async(event, context) => {
             await Promise.all(uploads);
         }
 
-        if (event.RequestType === 'Create' || event.RequestType === 'Delete' || event.RequestType === 'Upload') {
-            return sendResponse(event, context, 'SUCCESS', { 'Message': 'Resource ' + event.RequestType + ' successful!' })
-        } else {
-            return sendResponse(event, context, 'FAILED')
-        }
+        return sendResponse(event, context, 'SUCCESS', { })
     }
 };
 

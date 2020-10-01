@@ -1,28 +1,17 @@
-<img src="https://parima.s3.amazonaws.com/placeholder/parima.png" alt="Parima">
+<img src="images/parima.png" alt="Parima">
 
-# Parima: Launch Your Front-End Site in the Cloud 
-## …and leave any server and infrastructure complications behind
+[![][license img]][license]
+
+# Launch Your Website using AWS in Minutes 
+## … and leave any server and infrastructure complications behind
 
 
 
-# What is Parima?
+## What is Parima?
 
 Parima is a free, open source project that has been created to allow easy publishing of static web sites and JavaScript web applications (like Angular or React apps) using Amazon Web Services. It's ideal for designers and front-end developers who want to launch a new web site without having to worry about hosting outside of creating an AWS Account.
 
-Using AWS CloudFormation, Parima creates a simple, serverless architecture for your web site, using Amazon S3 to store the markup, code, and asset files, and AWS CloudFront to distribute the site using HTTPS. It can be installed with or without a custom domain.
-
-# How It Works
-
-Parima installs into your AWS Account using CloudFormation. Once installed, you will have access to your first website as well as the Parima Site Launch Console, which allows you to manage your new website and add new ones.
-
-Updating a Parima-launched website can be done with the Amazon Web Services Command Line Interface (CLI), using one command from the root folder of your site (or for most frameworks, your ./dist folder):
-
-```shell
-aws s3 sync . s3://SITE-NAME-s3bucket-123456abcd/v1
-```
-
-Parima also includes an optional product for handling web forms without needing a server: **FormKiQ Core**. FormKiQ Core is free to include (there is an optional license for support), and like Parima, FormKiQ Core uses AWS Free Tier services in your AWS Cloud.
-
+Parima creates a simple, serverless architecture for your web site, using Amazon S3 to store the markup, code, and asset files, and AWS CloudFront to distribute the site using HTTPS. It can be installed with or without a custom domain (for custom domain requires domain DNS to be using Route53).
 
 ## Requirements
 
@@ -32,72 +21,148 @@ Parima also includes an optional product for handling web forms without needing 
 
     **[Sign Up for an AWS Account](https://portal.aws.amazon.com/billing/signup)**
 
-* **A Domain Name (optional):** Parima builds both your first website and the Parima Site Launch Console. By default, both can be accessed using randomly-generated CloudFront URLs, such as https://*abcdefg99*.cloudfront.net
+* **[AWS Command Line Interface](https://aws.amazon.com/cli/)** is a tool provided by AWS to manage your AWS services. Using the AWS CLI, make it easy to deploy Parima and to sync your local website with AWS.
 
-    You can specify a domain during the installation of Parima, and that domain will be used for the website (www.DOMAIN.COM and DOMAIN.COM), as well as for the Parima Site Launcher console (console.parima.DOMAIN.COM).
 
-    A domain registered outside of AWS can be used (by setting up an Amazon Route 53 [Hosted Zone](https://console.aws.amazon.com/route53/v2/hostedzones#)), or a new domain can be registered within the AWS Management Console, beginning at $9/year.
 
-    **[Register a Domain using Amazon Route 53](https://console.aws.amazon.com/route53/home#DomainRegistration:)** | **[Transfer a Domain to Amazon Route 53](https://console.aws.amazon.com/route53/home#DomainTransfer:)**
+# How It Works
+
+<img src="images/aws.png" alt="AWS Services">
+
+Parima installs into your AWS Account using CloudFormation (through the Console or AWS CLI).
+
+CloudFormation sets up an S3 bucket to hold the artifacts of the website, CloudFront to host the website in Amazon's content delivery network (CDN). Optionally, if a Domain/Hosted Zone is specified a Certificate / Route 53 DNS entries are created for your custom domain.
+
 
     
 # Installation
 
-## Step 1: Access CloudFormation within the AWS Management Console
+**NOTE:** It may take up to **15 minutes** for the CloudFormation script to complete.
 
-Parima is installed using AWS CloudFormation within your AWS Account. Open AWS CloudFormation to begin:
+## CloudFormation Parameters
 
-**[Open AWS CloudFormation](https://console.aws.amazon.com/cloudformation)**
+### WebsiteVersion
+Parima is setup to handle multiple versions of a website and easily switch between them. This CloudFormation parameter control which version of the website is active. By default a **v1** version is created. This means that you need to upload all your website contents to the **v1** directory inside of S3. 
+
+Creating a **v2** version of your website is very easy. Upload your website contents to a **v2** directory and then run the CloudFormation script and specify **v2** in the **WebsiteVersion** parameter. This will tell CloudFront to serve files in the **v2** directory. If you want to switch baack to **v1**, just run the CloudFormation again and specify **v1** as the **WebsiteVersion**.
+
+### HostedZone & DomainName (Optional)
+By default, CloudFront generates a random URL to access your website, such as https://*abcdefg99*.cloudfront.net.
+
+You can specify a custom domain/Route 53 hosted zone during the installation of Parima, and that domain will be used for the website, e.g. www.mycompany.com.
+
+**Note:** The domain needs to be using a Route 53 Hosted Zone. e.g. Route 53 Hosted Zone mycompany.com must exist and the DNS must point to AWS' DNS.
+
+A domain registered outside of AWS can be used (by setting up an Amazon Route 53 [Hosted Zone](https://console.aws.amazon.com/route53/v2/hostedzones#)), or a new domain can be registered within the AWS Management Console.
+
+**[Register a Domain using Amazon Route 53](https://console.aws.amazon.com/route53/home#DomainRegistration:)** | **[Transfer a Domain to Amazon Route 53](https://console.aws.amazon.com/route53/home#DomainTransfer:)**
+
+## CloudFormation Outputs
+
+The Parima CloudFormation generates the following outputs:
+* WebsiteUrl - The Website URL
+* AccessKeyId / AccessKeySecret - IAM Security credentials
+* SyncCommand - The aws cli command that can be used to sync the website in the current directory with AWS
+* S3Bucket - The location of the hosted website files
+
+## AWS Console
+
+Using the links below install Parima with one click.
+| Region   |      CloudFormation Url      |
+|----------|:-------------:|------:|
+| us-east-1 |  https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| us-east-2 |  https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| us-west-1 |  https://us-west-1.console.aws.amazon.com/cloudformation/home?region=us-west-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| us-west-2 |  https://us-west-2.console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| af-south-1 |  https://af-south-1.console.aws.amazon.com/cloudformation/home?region=af-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| ap-east-1 |  https://ap-east-1.console.aws.amazon.com/cloudformation/home?region=ap-east-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| ap-northeast-1 |  https://ap-northeast-1.console.aws.amazon.com/cloudformation/home?region=ap-northeast-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| ap-northeast-2 |  https://ap-northeast-2.console.aws.amazon.com/cloudformation/home?region=ap-northeast-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| ap-northeast-3 |  https://ap-northeast-3.console.aws.amazon.com/cloudformation/home?region=ap-northeast-3#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| ap-south-1 |  https://ap-south-1.console.aws.amazon.com/cloudformation/home?region=ap-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| ap-southeast-1 |  https://ap-southeast-1.console.aws.amazon.com/cloudformation/home?region=ap-southeast-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| ap-southeast-2 |  https://ap-southeast-2.console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| ca-central-1 |  https://ca-central-1.console.aws.amazon.com/cloudformation/home?region=ca-central-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| eu-central-1 |  https://eu-central-1.console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| eu-north-1 |  https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| eu-south-1 |  https://eu-south-1.console.aws.amazon.com/cloudformation/home?region=eu-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| eu-west-1 |  https://eu-west-1.console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| eu-west-2 |  https://eu-west-2.console.aws.amazon.com/cloudformation/home?region=eu-west-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| eu-west-3 |  https://eu-west-3.console.aws.amazon.com/cloudformation/home?region=eu-west-3#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| me-south-1 |  https://me-south-1.console.aws.amazon.com/cloudformation/home?region=me-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| sa-east-1 |  https://sa-east-1.console.aws.amazon.com/cloudformation/home?region=sa-east-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+
+## Using AWS CLI 
+Assumes you have the AWS CLI [configured](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html).
+
+* **Clone Repo:** git clone https://github.com/formkiq/parima.git
+* **Run Installation With Custom Domain:** aws cloudformation deploy --template-file parima.yml --stack-name &lt;stack_name&gt; --parameter-overrides HostedZone=&lt;hosted_zone_name&gt; DomainName=&lt;domain_name&gt; --capabilities CAPABILITY_IAM  --region &lt;aws_region&gt;
+* **Run Installation Without Custom Domain:** aws cloudformation deploy --template-file parima.yml --stack-name &lt;stack_name&gt; --capabilities CAPABILITY_IAM --region &lt;aws_region&gt;
+* **CloudFormation Results:** aws cloudformation describe-stacks --stack-name &lt;stack_name&gt; --region &lt;aws_region&gt;
+
+The CloudFormation output will display:
+* The StackStatus will indicate if the CloudFormation template was successful or not.
+* The CloudFront URL used to access the website.
+* The AccessKey/Secret that have read/write access to update the website.
+* The aws cli "sync" command that can be used to sync the current directory to the s3 bucket.
+<pre>
+{
+    "Stacks": [
+        {
+            "StackName": "&lt;stack_name&gt;",
+            ...
+            "StackStatus": "CREATE_COMPLETE",
+            ...
+            "Outputs": [
+                {
+                    "OutputKey": "S3Bucket",
+                    "OutputValue": "parima-s3bucket-XXXXXXXXXX",
+                    "Description": "S3 Bucket"
+                },
+                {
+                    "OutputKey": "AccessKeyId",
+                    "OutputValue": "AKIAZB6IXXXXXX",
+                    "Description": "S3 Access Key"
+                },
+                {
+                    "OutputKey": "AccessKeySecret",
+                    "OutputValue": "TaVIVcYXXXXXXXXXXXXXXX",
+                    "Description": "S3 Secret Key"
+                },                
+                {
+                    "OutputKey": "SyncCommand",
+                    "OutputValue": "aws s3 sync . s3://parima-s3bucket-XXXXXXXXX/v1",
+                    "Description": "Sync Current Directory to S3"
+                },
+                {
+                    "OutputKey": "WebsiteUrl",
+                    "OutputValue": "https://d2nXXXXXXXXX.cloudfront.net",
+                    "Description": "Website Url"
+                }
+            ]
+        }
+    ]
+}
+</pre>
 
 
-## Step 2: Run CloudFormation to Create the Parima Site Launcher Console and Your First Parima-Launched Website
+## Bugs and Feedback
 
-Parima is installed by Creating a Stack. Click the "Create Stack" button; if you already have other CloudFormation Stacks, you will see a dropdown instea of a button; choose "With new resources (standard)".
+For bugs, questions and discussions please use the [GitHub Issues](https://github.com/formkiq/parima/issues).
 
-CloudFormation has many options in its Create Stack process, but Parima does not require much customization. On the first screen, paste the following URL into **Amazon S3 URL**:
-```
-https://SOMETHING
-```
+ 
+## LICENSE
 
-Click "Next".
+Copyright 2020 FormKiQ, Inc.
 
-The next page is titled "Specify Stack Details". This is where all of the customization is done.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-First, provide a Stack Name. This should be your site name, and should include your environment (such as "staging" or "production"). It's a good idea to have at least two different environments for your website, so you have one to test with and one that your visitors will see.
+<http://www.apache.org/licenses/LICENSE-2.0>
 
-Example:
-MyCompany.com will have a development, a staging, and a production environment. The Parima Stack could then be named "mycompany-dev", "mycompany-staging", and "mycompany-prod".
-
-Once you have provided your stack name, you will need to choose your Parameters.
-
-If you are planning on using a Custom Domain that you have registered or transferred to Amazon Route 53 (or a domain registered elsewhere that has been added to a Hosted Zone), you need to specify values for **DomainName** and **HostedZone**. If you are not requiring a Custom Domain (such as for dev environments or a proof of concept), you should leave these two parameters blank. You will be provided with a cloudfront.net URL to access the website instead.
-
-**WebsiteVersion** can be left as v1.
-
-Once you have chosen and entered your parameters, click "Next".
-
-You can ignore the settings on the next page, "Configure Stack Options". Click "Next" again.
-
-On the "Review" page, you need to scoll down to the bottom of the page in order to click the Acknowledgement Checkbox; this indicates to AWS that you are agreeing to create Identity and Access Management (IAM) resources. These IAM resources are what will allow you to publish your website to AWS.
-
-Once you have clicked the Acknowledgement Checkbox, you can click "Create Stack" and the installation will begin.
-
-**The installation could take up to fifteen minutes to complete.**
-
-If the installation fails, it's likely due to an issue with your Custom Domain. Please verify that HostedZone matches an existing Hosted Zone Domain Name value in Route 53, and that DomainName is either a subdomain of that Hosted Zone Domain Name, or that Domain Name itself. If the values all match, confirm that your DomainName value does not already have a CNAME or A entry under your Route 53 Hosted Zone. As Parima needs to set up an SSL Certificate for your domain, you will need to delete your existing CNAME entry so Parima can create its own entry for certificate validation.
-
-If you are still unable to complete the installation, please [Review the Current Issues](https://github.com/formkiq/parima/issues), and submit a new issue if you are unable to find a similar one.
-
-## Step 3: Retrieve Your Parima URLs and Access Key
-
-One the installation has completed, you will be able to retrieve the URLs and Access Key information that you will need to view and update your new Parima-Launched Website. 
-
-***To be added***
-
-## Step 4: Download and Install AWS CLI
-
-***To be added***
-
-## Step 5: Sync Your Local Machine's Website to your Parima-Launched Website in AWS
-
-***To be added***
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
