@@ -70,27 +70,27 @@ The Parima CloudFormation generates the following outputs:
 Using the links below to install Parima with one click.
 |Region|CloudFormation Url|
 |--------------|--------------------------|
-| us-east-1 |  https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| us-east-2 |  https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| us-west-1 |  https://us-west-1.console.aws.amazon.com/cloudformation/home?region=us-west-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| us-west-2 |  https://us-west-2.console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| af-south-1 |  https://af-south-1.console.aws.amazon.com/cloudformation/home?region=af-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| ap-east-1 |  https://ap-east-1.console.aws.amazon.com/cloudformation/home?region=ap-east-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| ap-northeast-1 |  https://ap-northeast-1.console.aws.amazon.com/cloudformation/home?region=ap-northeast-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| ap-northeast-2 |  https://ap-northeast-2.console.aws.amazon.com/cloudformation/home?region=ap-northeast-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| ap-northeast-3 |  https://ap-northeast-3.console.aws.amazon.com/cloudformation/home?region=ap-northeast-3#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| ap-south-1 |  https://ap-south-1.console.aws.amazon.com/cloudformation/home?region=ap-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| ap-southeast-1 |  https://ap-southeast-1.console.aws.amazon.com/cloudformation/home?region=ap-southeast-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| ap-southeast-2 |  https://ap-southeast-2.console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| ca-central-1 |  https://ca-central-1.console.aws.amazon.com/cloudformation/home?region=ca-central-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| eu-central-1 |  https://eu-central-1.console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| eu-north-1 |  https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| eu-south-1 |  https://eu-south-1.console.aws.amazon.com/cloudformation/home?region=eu-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| eu-west-1 |  https://eu-west-1.console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| eu-west-2 |  https://eu-west-2.console.aws.amazon.com/cloudformation/home?region=eu-west-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| eu-west-3 |  https://eu-west-3.console.aws.amazon.com/cloudformation/home?region=eu-west-3#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| me-south-1 |  https://me-south-1.console.aws.amazon.com/cloudformation/home?region=me-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
-| sa-east-1 |  https://sa-east-1.console.aws.amazon.com/cloudformation/home?region=sa-east-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima.yml&stackName=parima |
+| us-east-1 |  https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| us-east-2 |  https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| us-west-1 |  https://us-west-1.console.aws.amazon.com/cloudformation/home?region=us-west-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| us-west-2 |  https://us-west-2.console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| af-south-1 |  https://af-south-1.console.aws.amazon.com/cloudformation/home?region=af-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| ap-east-1 |  https://ap-east-1.console.aws.amazon.com/cloudformation/home?region=ap-east-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| ap-northeast-1 |  https://ap-northeast-1.console.aws.amazon.com/cloudformation/home?region=ap-northeast-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| ap-northeast-2 |  https://ap-northeast-2.console.aws.amazon.com/cloudformation/home?region=ap-northeast-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| ap-northeast-3 |  https://ap-northeast-3.console.aws.amazon.com/cloudformation/home?region=ap-northeast-3#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| ap-south-1 |  https://ap-south-1.console.aws.amazon.com/cloudformation/home?region=ap-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| ap-southeast-1 |  https://ap-southeast-1.console.aws.amazon.com/cloudformation/home?region=ap-southeast-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| ap-southeast-2 |  https://ap-southeast-2.console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| ca-central-1 |  https://ca-central-1.console.aws.amazon.com/cloudformation/home?region=ca-central-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| eu-central-1 |  https://eu-central-1.console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| eu-north-1 |  https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| eu-south-1 |  https://eu-south-1.console.aws.amazon.com/cloudformation/home?region=eu-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| eu-west-1 |  https://eu-west-1.console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| eu-west-2 |  https://eu-west-2.console.aws.amazon.com/cloudformation/home?region=eu-west-2#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| eu-west-3 |  https://eu-west-3.console.aws.amazon.com/cloudformation/home?region=eu-west-3#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| me-south-1 |  https://me-south-1.console.aws.amazon.com/cloudformation/home?region=me-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
+| sa-east-1 |  https://sa-east-1.console.aws.amazon.com/cloudformation/home?region=sa-east-1#/stacks/create/review?templateURL=https://formkiq-distribution-core.s3.amazonaws.com/parima/v1.0/parima.yml&stackName=parima |
 
 ## Using AWS CLI 
 Assumes you have the AWS CLI [configured](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html).

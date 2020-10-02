@@ -6,7 +6,7 @@ var s3 = new AWS.S3({apiVersion: '2006-03-01'});
 module.exports.handler = async(event, context) => {
 
     var downloads = [];
-    const urls = ["https://parima.s3.amazonaws.com/placeholder/index.html","https://parima.s3.amazonaws.com/placeholder/parima.png","https://parima.s3.amazonaws.com/placeholder/favicon.ico"];
+    const urls = ["https://raw.githubusercontent.com/formkiq/parima/master/placeholder/index.html","https://raw.githubusercontent.com/formkiq/parima/master/placeholder/parima.png","https://raw.githubusercontent.com/formkiq/parima/master/placeholder/favicon.ico"];
 
     if (event.RequestType != null) {
     
@@ -23,11 +23,13 @@ module.exports.handler = async(event, context) => {
                 
                 return Promise.all(uploads);
             }).then(()=>{
-                return sendResponse(event, context, 'SUCCESS', {})
+                return sendResponse(event, context, 'SUCCESS', {});
             }).catch(error => { 
                 console.log("error " + error);
                 return sendResponse(event, context, 'FAILED');
             });
+        } else {
+            return sendResponse(event, context, 'SUCCESS', {});
         }
     }
 };
