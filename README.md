@@ -1,6 +1,6 @@
 <img src="images/parima.png" alt="Parima">
 
-[![][license img]][license]
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # Launch Your Website using AWS in Minutes 
 ## … and leave any server and infrastructure complications behind
