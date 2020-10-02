@@ -6,7 +6,7 @@ var s3 = new AWS.S3({apiVersion: '2006-03-01'});
 module.exports.handler = async(event, context) => {
 
     var downloads = [];
-    const urls = ["https://parima.s3.amazonaws.com/placeholder/index.html","https://parima.s3.amazonaws.com/placeholder/parima.png"];
+    const urls = ["https://parima.s3.amazonaws.com/placeholder/index.html","https://parima.s3.amazonaws.com/placeholder/parima.png","https://parima.s3.amazonaws.com/placeholder/favicon.ico"];
 
     if (event.RequestType != null) {
     
@@ -15,21 +15,24 @@ module.exports.handler = async(event, context) => {
                 downloads.push(download(url));
             }
             
-            await Promise.all(downloads);
-            
-            var uploads = [];
-            for (let url of urls) {
-                uploads.push(upload(url));
-            }
-            
-            await Promise.all(uploads);
+            return Promise.all(downloads).then(()=>{
+                var uploads = [];
+                for (let url of urls) {
+                    uploads.push(upload(url));
+                }
+                
+                return Promise.all(uploads);
+            }).then(()=>{
+                return sendResponse(event, context, 'SUCCESS', {})
+            }).catch(error => { 
+                console.log("error " + error);
+                return sendResponse(event, context, 'FAILED');
+            });
         }
-
-        return sendResponse(event, context, 'SUCCESS', { })
     }
 };
 
-function upload(url) {
+async function upload(url) {
     const filename = url.split('/').pop();
     return new Promise((resolve, reject) => {
         console.log("Uploading " + filename + " to " + process.env.S3_BUCKET);
@@ -44,7 +47,7 @@ function upload(url) {
         s3.putObject(options, function (err, data) {
             if (err) {
                 console.log(err);
-                reject(err);
+                resolve(err);
             } else {
                 resolve(filename);
             }
@@ -52,7 +55,7 @@ function upload(url) {
     });
 }
 
-function download(url) {
+async function download(url) {
     const filename = url.split('/').pop();
     const file = fs.createWriteStream("/tmp/" + filename);
     
@@ -62,13 +65,13 @@ function download(url) {
                 response.pipe(file);
             } else {
                 file.close();
-                reject(`Server responded with ${response.statusCode}: ${response.statusMessage}`);
+                resolve(`Server responded with ${response.statusCode}: ${response.statusMessage}`);
             }
         });
         
         request.on("error", err => {
             file.close();
-            reject(err.message);
+            resolve(err.message);
         });
 
         file.on("finish", () => {
@@ -78,11 +81,9 @@ function download(url) {
     });
 }
 
-function sendResponse (event, context, responseStatus, responseData) {
+async function sendResponse (event, context, responseStatus, responseData) {
     var https = require('https');
     var url = require('url');
-
-    console.log('Sending response ' + responseStatus)
     
     var responseBody = JSON.stringify({
         Status: responseStatus,
@@ -93,8 +94,6 @@ function sendResponse (event, context, responseStatus, responseData) {
         LogicalResourceId: event.LogicalResourceId,
         Data: responseData
     });
-
-    console.log('RESPONSE BODY:\n', responseBody);
 
     var parsedUrl = url.parse(event.ResponseURL);
     var options = {
@@ -108,14 +107,10 @@ function sendResponse (event, context, responseStatus, responseData) {
         }
     }
 
-    console.log('SENDING RESPONSE...\n');
-
     const promise = new Promise(function(resolve, reject) {
 
         var req = https.request(options, (res) => {
             res.setEncoding("utf8");
-            console.log('statusCode:', res.statusCode);
-            console.log('headers:', res.headers);
 
             let body = "";
             res.on('data', (data) => {
@@ -123,21 +118,15 @@ function sendResponse (event, context, responseStatus, responseData) {
             });
 
             res.on("end", () => {
-
-                console.log("response status: " + res.statusCode);
-                console.log("response body: " + body);
                 resolve([body, res.statusCode, res.headers]);
             });
 
         }).on('error', (e) => {
             let text = JSON.stringify(e);
-            console.log("unable to send message");
-            console.log(text);
             resolve([{
                 message: "Unable to send message"
             }, 502, null]);
         }).on('timeout', () => {
-            console.log("request timeout");
             resolve([{
                 message: "Request has timed out"
             }, 502, null]);
