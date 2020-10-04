@@ -5,7 +5,15 @@
 # Launch Your Website using AWS in Minutes 
 ## … and leave any server and infrastructure complications behind
 
+## Table of Contents
 
+- [Introduction](https://github.com/formkiq/parima#introduction)
+- [How It Works](https://github.com/formkiq/parima#how-it-works)
+- [Installation](https://github.com/formkiq/parima#installation)
+- [Frequently Asked Questions](https://github.com/formkiq/parima#frequently-asked-questions)
+
+
+# Introduction
 
 ## What is Parima?
 
@@ -170,29 +178,29 @@ limitations under the License.
 
 # Frequently Asked Questions
 
-**1. Why not simply use S3 and CloudFront?**
+### **1. Why not simply use S3 and CloudFront?**
 
 Parima is a framework to help you set up S3 and CloudFront with one-click, and also includes Custom Domains as part of that simple process.
 
 
-**2. How much does hosting a Parima-launched site cost?**
+### **2. How much does hosting a Parima-launched site cost?**
 
 As Parima is free to use, the total cost would be based only on AWS usage and Amazon Route53 DNS. We estimate that most low-to-medium traffic static sites could be run for USD$1.50-4.00 per month.
 
 
-**3. If I make changes to my website and redeploy (using AWS CLI Sync), what happens to my previous site and the files stores in S3?**
+### **3. If I make changes to my website and redeploy (using AWS CLI Sync), what happens to my previous site and the files stores in S3?**
 
 Parima will NEVER delete any S3 resources; the S3 DeletionPolicy is set to "Retain", so even deleting the CloudFormation Stack, the content inside your S3 Bucket will remain. Updating your content through Sync will update files within S3, but previous versions can be preserved by turning on S3 Versioning for your bucket.
 
 You can also choose to create a new version of your website by re-running CloudFormation with a new WebsiteVersion parameter. For example, changing from V1 to V2 will create a new copy of your website in a new V2 folder, and will point your CloudFront URL or Custom Domain URL to that V2 version. Your V1 version would be available as an archived version, and you can then revert to that V1 version of your site at any point by re-running CloudFormation with V1 as your WebsiteVersion parameter.
 
 
-**4. How do I create multiple environments, like Development and Production?**
+### **4. How do I create multiple environments, like Development and Production?**
 
 You can create as many environments as you like, and can either create subdomains for other environments, e.g., dev.mydomain.com, or use the automatic CloudFront URLs, e.g., https://*abcdefg99*.cloudfront.net
 
 
-**5. What’s the advantage of this vs using a static site Terraform module or any other Cloud Formation template?**
+### **5. What’s the advantage of this vs using a static site Terraform module or any other Cloud Formation template?**
 
 The main advantage is simplicity. You can have a static site with a custom domain setup in less than 5 minutes.
     
@@ -203,14 +211,14 @@ All other CloudFormation templates have two problems:
 Terraform modules have similar issues.
 
 
-**6. What sets Parima apart from the AWS Amplify command "amplify add hosting"?**
+### **6. What sets Parima apart from the AWS Amplify command "amplify add hosting"?**
 
 The idea we are going for with Parima is to provide a simpler process than Amplify, one that only creates the resources required for static site / spa framework hosting.
 
 It's also one-click, so is well-suited to devs who aren't looking to learn the feature set of Amplify at this point.
 
 
-**7. Why does Parima not include any back end functionality?**
+### **7. Why does Parima not include any back end functionality?**
 
 Parima is focused on launching static sites and JavaScript frameworks such as Angular, React, and Vue. However, we are looking into adding optional back-end features, such as handling web forms.
 
