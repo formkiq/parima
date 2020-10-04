@@ -178,7 +178,9 @@ aws s3 sync . s3://parima-s3bucket-XXXXXXXXX/v2
 **Step 2:** Update Parima to deployment to use this new version:
 
 ```
-aws cloudformation deploy --template-file parima.yml --stack-name <stack_name> —--parameter-overrides WebsiteVersion=v2 --capabilities CAPABILITY_IAM --region <aws_region>
+aws cloudformation deploy --template-file parima.yml --stack-name <stack_name> \
+—--parameter-overrides WebsiteVersion=v2 --capabilities CAPABILITY_IAM \
+--region <aws_region>
 ```
 
 By creating a new version (v2), the previous version (v1) is still available, in case you want to switch back.
