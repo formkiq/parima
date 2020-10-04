@@ -5,12 +5,12 @@
 # Launch Your Website using AWS in Minutes 
 ## … and leave any server and infrastructure complications behind
 
-## Table of Contents
-
 - [Introduction](https://github.com/formkiq/parima#introduction)
 - [How It Works](https://github.com/formkiq/parima#how-it-works)
 - [Installation](https://github.com/formkiq/parima#installation)
 - [Frequently Asked Questions](https://github.com/formkiq/parima#frequently-asked-questions)
+- [Bugs and Feedback](https://github.com/formkiq/parima#bugs-and-feedback)
+- [LICENSE](https://github.com/formkiq/parima#license)
 
 
 # Introduction
@@ -154,28 +154,6 @@ The CloudFormation output will display:
 </pre>
 
 
-## Bugs and Feedback
-
-For bugs, questions and discussions please use the [GitHub Issues](https://github.com/formkiq/parima/issues).
-
- 
-## LICENSE
-
-Copyright 2020 FormKiQ, Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at:
-
-<http://www.apache.org/licenses/LICENSE-2.0>
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-
 # Frequently Asked Questions
 
 ### **1. Why not simply use S3 and CloudFront?**
@@ -225,3 +203,25 @@ Parima is focused on launching static sites and JavaScript frameworks such as An
 For developers who are interested in adding a back-end API of their own for their Parima-launched site to consume, Amazon provides an excellent tool, [AWS SAM CLI](https://github.com/aws/aws-sam-cli).
     
 We are looking at creating Tutorials to help developers use Parima along with an API created with SAM CLI, but for now, you can find more information in the [AWS Serverless Application Model Developer Guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html).
+
+
+# Bugs and Feedback
+
+For bugs, questions and discussions please use the [GitHub Issues](https://github.com/formkiq/parima/issues).
+
+
+# LICENSE
+
+Copyright 2020 FormKiQ, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at:
+
+<http://www.apache.org/licenses/LICENSE-2.0>
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
