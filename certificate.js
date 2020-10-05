@@ -2,48 +2,52 @@
  * CloudFormation Custom Resource for generating SSL Certificate in the us-east-1 region
  */
 const AWS = require('aws-sdk');
-var acm = new AWS.ACM({region:'us-east-1'});
+var acm = new AWS.ACM();
 var route53 = new AWS.Route53();
 var cloudformation = new AWS.CloudFormation();
 
-const sleep = (milliseconds) => {
-  return new Promise(resolve => setTimeout(resolve, milliseconds))
-}
+const wait = interval => new Promise(resolve => setTimeout(resolve, interval));
 
 module.exports.handler = async(event, context) => {
     console.log(JSON.stringify(event));
     if (event.RequestType != null) {
 
+        let region = event.ResourceProperties.Region;
+        if (region != null) {
+            acm = new AWS.ACM({region:region});
+            console.log("using region: " + region);
+        }
+
         if (event.RequestType === 'Create') {
             let domainName = event.ResourceProperties.DomainName;
             let hostedZone = event.ResourceProperties.HostedZoneName;
 
-            return createCertificate(hostedZone, domainName).then((certificate) => {
-                console.log("created certificate " + certificate.CertificateArn);
-                return describeCertificate(certificate.CertificateArn);
-            }).then((data) => {
+            return createCertificate(hostedZone, domainName).then((data) => {
                 console.log("adding certificate verification DNS entries");
-                updateRoute53(hostedZone, data);
-                return data.Certificate;
+                return updateRoute53Retry(hostedZone, data.CertificateArn);
             }).then((certificate) => {
                 console.log("waiting DNS to be updated so certificate can be validated");
-                return waitForValidation(certificate.CertificateArn);
+                return waitForValidation(certificate);
             }).then((certificate)=>{
+                console.log("certificate has been validated");
                 return sendResponse(event, context, 'SUCCESS', { 'CertificateArn': certificate.Certificate.CertificateArn})
             }).catch(error => { 
-                console.log("error " + error);
+                console.log(error);
                 return sendResponse(event, context, 'FAILED');
             });
             
         } else if (event.RequestType === 'Delete') {
             
             let stackName = event.ResourceProperties.StackName;
-            return findCertificateArn(stackName).then((certificateArn)=>{
-                return deleteCertificate(certificateArn);
+            let outputParameter = event.ResourceProperties.OutputParameter;
+
+            return findCertificateArn(stackName, outputParameter).then((certificateArn)=>{
+                return deleteCertificateRetry(certificateArn);
             }).then((certificate)=>{
                 return sendResponse(event, context, 'SUCCESS', { })
             }).catch(error => { 
-                return sendResponse(event, context, 'SUCCESS');
+                console.log(error);
+                return sendResponse(event, context, 'FAILED');
             });
             
         } else if (event.RequestType === 'Update') {
@@ -69,11 +73,30 @@ async function findHostedZoneId(hostedZone) {
     });
 }
 
-async function updateRoute53(hostedZone, certificate) {
+async function updateRoute53Retry(hostedZone, certificateArn, retriesLeft = 10, interval = 10000) {
 
-    let hostedZoneId = await findHostedZoneId(hostedZone);
+  let hostedZoneId = await findHostedZoneId(hostedZone);
+  console.log("using hosted zone " + hostedZoneId);
+
+  try {
+      
+    let certificate = await describeCertificate(certificateArn);
+    await updateRoute53(hostedZoneId, certificate);
+    return certificateArn;
+
+  } catch (error) {
+    await wait(interval);
+    if (retriesLeft === 0) {
+      return Promise.reject('Maximum retries exceeded!');
+    }
+    return updateRoute53Retry(hostedZone, certificateArn, --retriesLeft, interval);
+  }
+}
+
+async function updateRoute53(hostedZoneId, certificate) {
+
+    var promises = [];
     
-    let promises = [];
     for (let val of certificate.Certificate.DomainValidationOptions) {
     
         if (val.ResourceRecord && val.ResourceRecord.Name) {
@@ -96,14 +119,7 @@ async function updateRoute53(hostedZone, certificate) {
             };
             
             promises.push(route53.changeResourceRecordSets(params).promise());
-
-        } else {
-            console.log("Missing DNS Record, going to sleep and will try again");
-
-           promises.push(sleep(10000).then(()=> {
-               return updateRoute53(hostedZone, certificate);
-           }));
-        }
+        } 
     }
     
     return Promise.all(promises);
@@ -112,7 +128,8 @@ async function updateRoute53(hostedZone, certificate) {
 async function waitForValidation(certificateArn) {
     return acm.waitFor('certificateValidated', {CertificateArn: certificateArn}).promise();
 }
-async function findCertificateArn(stackName) {
+
+async function findCertificateArn(stackName, outputParameter) {
     var params = {
       StackName: stackName
     };
@@ -122,19 +139,39 @@ async function findCertificateArn(stackName) {
           else {
               var value = "";
               for (let output of data.Stacks[0].Outputs) {
-                  if (output.OutputKey == "Certificate") {
+                  if (output.OutputKey == outputParameter) {
                       value = output.OutputValue;
                   }
               }
-              resolve(value);
+
+              if (value != "") {
+                resolve(value);
+              } else {
+                reject(value);
+              }
           }
         });
     });
 }
 
-async function deleteCertificate(certArn) {
-    console.log("deleting certificate " + certArn);
-    return acm.deleteCertificate({ CertificateArn: certArn }).promise();
+async function deleteCertificateRetry(certificateArn, retriesLeft = 30, interval = 10000) {
+
+  try {
+      
+    return await deleteCertificate(certificateArn);
+
+  } catch (error) {
+    await wait(interval);
+    if (retriesLeft === 0) {
+      return Promise.reject('Maximum retries exceeded!');
+    }
+    return deleteCertificateRetry(certificateArn, --retriesLeft, interval);
+  }
+}
+
+async function deleteCertificate(certificateArn) {
+    console.log("deleting certificate " + certificateArn);
+    return acm.deleteCertificate({ CertificateArn: certificateArn }).promise();
 }
 
 async function describeCertificate(certArn) {
