@@ -9,6 +9,7 @@
 - [How It Works](https://github.com/formkiq/parima#how-it-works)
 - [Installation](https://github.com/formkiq/parima#installation)
 - [Frequently Asked Questions](https://github.com/formkiq/parima#frequently-asked-questions)
+- [Tutorials](https://github.com/formkiq/parima#tutorials)
 - [Bugs and Feedback](https://github.com/formkiq/parima#bugs-and-feedback)
 - [LICENSE](https://github.com/formkiq/parima#license)
 
@@ -218,6 +219,11 @@ Parima is focused on launching static sites and JavaScript frameworks such as An
 For developers who are interested in adding a back-end API of their own for their Parima-launched site to consume, Amazon provides an excellent tool, [AWS SAM CLI](https://github.com/aws/aws-sam-cli).
     
 We are looking at creating Tutorials to help developers use Parima along with an API created with SAM CLI, but for now, you can find more information in the [AWS Serverless Application Model Developer Guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html).
+
+# Tutorials
+* [How To Build an Angular 10 and Tailwind CSS Application and Deploy to AWS, Using Parima](https://blog.formkiq.com/tutorials/use-parima-with-angular)
+
+(more tutorials to be added)
 
 
 # Bugs and Feedback
