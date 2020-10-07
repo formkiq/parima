@@ -222,6 +222,7 @@ We are looking at creating Tutorials to help developers use Parima along with an
 
 # Tutorials
 * [How To Build an Angular 10 and Tailwind CSS Application and Deploy to AWS, Using Parima](https://blog.formkiq.com/tutorials/use-parima-with-angular)
+* [How To Generate a Static Website with Hugo framework and Tailwind CSS, and Deploy to AWS Using Parima](https://blog.formkiq.com/tutorials/use-parima-with-hugo)
 
 (more tutorials to be added)
 
