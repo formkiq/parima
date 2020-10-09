@@ -221,6 +221,7 @@ For developers who are interested in adding a back-end API of their own for thei
 We are looking at creating Tutorials to help developers use Parima along with an API created with SAM CLI, but for now, you can find more information in the [AWS Serverless Application Model Developer Guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html).
 
 # Tutorials
+* [How To Transfer Your Existing Website to Amazon Web Services powered by S3 and CloudFront, using Parima](https://blog.formkiq.com/tutorials/transfer-your-website-to-aws-cloudfront-with-parima)
 * [How To Build an Angular 10 and Tailwind CSS Application and Deploy to AWS, Using Parima](https://blog.formkiq.com/tutorials/use-parima-with-angular)
 * [How To Generate a Static Website with Hugo framework and Tailwind CSS, and Deploy to AWS Using Parima](https://blog.formkiq.com/tutorials/use-parima-with-hugo)
 
