@@ -1,0 +1,25 @@
+{
+  "name": "parima",
+  "version": "1.2.0",
+  "description": "Parima - Launch Your Website using AWS in Minutes (https://github.com/formkiq/parima)",
+  "scripts": {
+    "build": "gulp",
+    "test": "mocha --reporter list"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/formkiq/parima.git"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/formkiq/parima/issues"
+  },
+  "homepage": "https://github.com/formkiq/parima#readme",
+  "devDependencies": {
+    "gulp": "^4.0.2",
+    "gulp-token-replace": "^1.1.5",
+    "gulp-uglify-es": "^2.0.0",
+    "mocha": "^8.1.3"
+  }
+}
