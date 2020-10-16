@@ -31,8 +31,24 @@ Parameters:
     Default: "static"
     AllowedValues: 
       - "static"
-      - "Hugo v0.76.3"
-Mappings: 
+      - "Hugo-v0.76.3"
+  Caching:
+    Description: Required. Caching Stategy used (see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-cache-policies.html)
+    Default: "Managed-CachingDisabled"
+    Type: String
+    AllowedValues:
+      - "Managed-CachingDisabled"
+      - "Managed-CachingOptimized"
+      - "Managed-CachingOptimizedForUncompressedObjects"
+
+Mappings:
+  CacheMap:
+    Managed-CachingDisabled:
+      ID: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+    Managed-CachingOptimized:
+      ID: 658327ea-f89d-4fab-a63d-7e88639e58f6
+    Managed-CachingOptimizedForUncompressedObjects:
+      ID: b2884449-e4de-46a7-ac36-70bc7f1ddd6d
   RegionMap: 
     us-east-1:
       BUCKET: formkiq-distribution-us-east-1-core
@@ -139,9 +155,7 @@ Resources:
             OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}'
         DefaultCacheBehavior:
           Compress: true
-          DefaultTTL: 600
-          MaxTTL: 600
-          MinTTL: 0
+          CachePolicyId: !FindInMap [CacheMap, !Ref Caching, ID]
           ForwardedValues:
             QueryString: false
           TargetOriginId: s3origin
@@ -183,9 +197,7 @@ Resources:
             OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}'
         DefaultCacheBehavior:
           Compress: true
-          DefaultTTL: 600
-          MaxTTL: 600
-          MinTTL: 0
+          CachePolicyId: !FindInMap [CacheMap, !Ref Caching, ID]
           ForwardedValues:
             QueryString: false
           TargetOriginId: s3origin
@@ -254,6 +266,7 @@ Resources:
   DeploymentLambdaResource:
     Type: Custom::DeploymentLambda
     Properties:
+      WebsiteVersion: !Ref WebsiteVersion
       ServiceToken: !GetAtt DeploymentLambda.Arn
       StackName: !Ref 'AWS::StackName'
       GitRepositoryUrl: !Ref GitRepositoryUrl
@@ -409,6 +422,8 @@ Resources:
             - cloudformation:UpdateStack
             - iam:GetRole
             - lambda:UpdateFunctionConfiguration
+            - lambda:GetFunctionConfiguration
+            - lambda:InvokeFunction
             - iam:PassRole
             - cloudfront:GetDistribution
             - cloudfront:UpdateDistribution

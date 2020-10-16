@@ -2,7 +2,7 @@
  * Deployment
  */
 const AWS = require('aws-sdk');
-
+var cloudformation = new AWS.CloudFormation();
 const s3 = new AWS.S3();
 const ssm = new AWS.SSM();
 const cf = new AWS.CloudFormation();
@@ -50,6 +50,8 @@ function buildConfig(event) {
         }
       }
       
+      obj.HasWebsiteVersionChanged = false;
+
       if (event.ResourceProperties != null) {
         obj.RequestType = event.RequestType;
         obj.GitRepositoryUrl = event.ResourceProperties.GitRepositoryUrl;
@@ -57,8 +59,13 @@ function buildConfig(event) {
         obj.GitBranch = event.ResourceProperties.GitBranch;
         obj.S3Bucket = event.ResourceProperties.S3Bucket;
         obj.GithubOAuthUrl = event.ResourceProperties.GithubOAuthUrl;
-        obj.SyncCommand = event.ResourceProperties.SyncCommand;
+        obj.syncingCommand = event.ResourceProperties.SyncCommand;
         obj.WebHookUrl = event.ResourceProperties.WebHookUrl;
+        obj.WebsiteVersion = event.ResourceProperties.WebsiteVersion;
+
+        if (event.OldResourceProperties != null && event.OldResourceProperties.WebsiteVersion != null) {
+          obj.HasWebsiteVersionChanged = event.OldResourceProperties.WebsiteVersion != event.ResourceProperties.WebsiteVersion;
+        }
       }
       
       if (event.RequestType === 'Create' && (obj.GitRepositoryUrl == null || obj.GitRepositoryUrl == "")) {
@@ -77,6 +84,15 @@ function buildConfig(event) {
 module.exports.handler = async(event, context) => {
   
   log(JSON.stringify(event));
+
+  if (event.queryStringParameters != null && event.queryStringParameters.hasaccess != null) {
+    return buildConfig(event)
+    .then((config) => {
+      return getAccessToken(config);
+    }).then((config) => {
+      return { statusCode: config.access_token != null ? 200 : 404, headers:{'Access-Control-Allow-Origin':'*'}, body: "" };
+    });
+  }
 
   return buildConfig(event)
   .then((config) => {
@@ -107,13 +123,10 @@ async function updateWebsiteVariables(config) {
   if (config.GitParimaStaticDeployed && config.GitCloneSuccess && fs.existsSync('/tmp/git/index.html')) {
     var text = fs.readFileSync('/tmp/git/index.html', 'utf8');
 
-    text = text.replace(/{{STYLE_GIT_AUTH}}/g, config.GithubOAuthUrl == null ? 'display:none;' : '');
     text = text.replace(/{{GIT_AUTH_URL}}/g, config.GithubOAuthUrl);
-    text = text.replace(/{{STYLE_GIT_WEBHOOK}}/g, config.WebHookUrl == null ? 'display:none;' : '');
     text = text.replace(/{{ WebHookUrl }}/g, config.WebHookUrl);
     text = text.replace(/{{ GithubRepoUrl }}/g, config.GitRepositoryUrl);
     text = text.replace(/{{ SyncCommand }}/g, config.SyncCommand);
-    text = text.replace(/{{ InvalidateCache }}/g, config.InvalidateCache);
 
     log(text);
     fs.writeFileSync('/tmp/git/index.html', text, 'utf8');
@@ -177,13 +190,15 @@ async function updateCloudFormation(config) {
   for (let param of config.CloudFormationParameters) {
     if (param.ParameterKey == "WebsiteVersion") {
       newWebsiteVersion = param.ParameterValue;
-      params.Parameters.push({ParameterKey: param.ParameterKey, ParameterValue: param.ParameterValue});
+      params.Parameters.push({ParameterKey: param.ParameterKey, ParameterValue: config.WebsiteVersion});
     } else {
       params.Parameters.push({ParameterKey: param.ParameterKey, UsePreviousValue:true});
     }
   }
 
-  if (newWebsiteVersion != config.WebsiteVersion) {
+  // ignore CloudFormation custom resource
+  if (config.RequestType == null && newWebsiteVersion != config.WebsiteVersion) {
+    console.log("updating website from " + config.WebsiteVersion + " to " + newWebsiteVersion);
     return cloudformation.updateStack(params).promise().then(()=>{
       return Promise.resolve(config);
     });
@@ -203,8 +218,7 @@ async function response(config) {
 
 async function updateGitWebsiteVersion(config) {
 
-  // skip updating website version on create.
-  if ((config.RequestType == null || config.RequestType != 'Create') && config.GitCloneSuccess) {
+  if (!config.HasWebsiteVersionChanged && config.GitCloneSuccess) {
     let dir = "/tmp/git/";
     var command = "git --git-dir " + dir + ".git log --format=\"%H\" -n 1";
     try {
@@ -280,7 +294,7 @@ function runClone(config, url, dir) {
 
 async function buildHugo(config) {
     
-    if (config.GitCloneSuccess && config.HugoVersion != null && config.HugoVersion.length > 0) {
+    if (config.GitCloneSuccess && config.DeploymentType != null && config.DeploymentType.length > 0 && config.DeploymentType.startsWith("Hugo")) {
         var command = "hugo --source /tmp/git --debug";
         
         try {
