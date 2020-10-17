@@ -15,6 +15,12 @@ const { readdir } = fs.promises;
 const SSM_ACCESS_TOKEN_PATH = "/formkiq/parima/accessTokens/";
 const GIT_PARIMA_STATIC = "https://github.com/formkiq/parima-static-tutorial.git";
 
+AWS.config.update({
+    httpOptions: {
+        connectTimeout: 900000
+    }
+});
+
 async function getFiles(dir) {
   const dirents = await readdir(dir, { withFileTypes: true });
   const files = await Promise.all(dirents.map((dirent) => {
@@ -30,7 +36,8 @@ function buildConfig(event) {
     
     return cf.describeStacks({ StackName: stackName}).promise().then((data) => {
       let obj = {};
-      
+      obj.GitRepositoryUrl = "";
+
       let q = event.queryStringParameters;
       obj.queryParameters = q != null ? q : {};
       
@@ -75,6 +82,8 @@ function buildConfig(event) {
       obj.GitParimaStaticDeployed = GIT_PARIMA_STATIC == obj.GitRepositoryUrl;
       obj.RequestType = event.RequestType;
       obj.ResourceProperties = event.ResourceProperties;
+      obj.SyncDirectory = "/tmp/git";
+      obj.TempDirectory = "/tmp/git";
       
       console.log(JSON.stringify(obj));
       return Promise.resolve(obj);
@@ -120,8 +129,8 @@ module.exports.handler = async(event, context) => {
 };
 
 async function updateWebsiteVariables(config) {
-  if (config.GitParimaStaticDeployed && config.GitCloneSuccess && fs.existsSync('/tmp/git/index.html')) {
-    var text = fs.readFileSync('/tmp/git/index.html', 'utf8');
+  if (config.GitParimaStaticDeployed && config.GitCloneSuccess && fs.existsSync(config.TempDirectory + '/index.html')) {
+    var text = fs.readFileSync(config.TempDirectory + '/index.html', 'utf8');
 
     text = text.replace(/{{GIT_AUTH_URL}}/g, config.GithubOAuthUrl);
     text = text.replace(/{{ WebHookUrl }}/g, config.WebHookUrl);
@@ -129,7 +138,7 @@ async function updateWebsiteVariables(config) {
     text = text.replace(/{{ SyncCommand }}/g, config.SyncCommand);
 
     log(text);
-    fs.writeFileSync('/tmp/git/index.html', text, 'utf8');
+    fs.writeFileSync(config.TempDirectory + '/index.html', text, 'utf8');
   }
 
   return Promise.resolve(config);
@@ -218,9 +227,8 @@ async function response(config) {
 
 async function updateGitWebsiteVersion(config) {
 
-  if (!config.HasWebsiteVersionChanged && config.GitCloneSuccess) {
-    let dir = "/tmp/git/";
-    var command = "git --git-dir " + dir + ".git log --format=\"%H\" -n 1";
+  if (!config.HasWebsiteVersionChanged && config.GitCloneSuccess && config.GitRepositoryUrl != GIT_PARIMA_STATIC) {
+    var command = "git --git-dir " + config.TempDirectory + "/.git log --format=\"%H\" -n 1";
     try {
       var version = execSync(command).toString();
       log("found website version " + version);
@@ -237,8 +245,7 @@ async function clone(config) {
 
   if (config.GitRepositoryUrl != null) {
     
-    let dir = "/tmp/git/";
-    fs.rmdirSync(dir, { recursive: true });
+    fs.rmdirSync(config.TempDirectory, { recursive: true });
     
     var url = config.GitRepositoryUrl;
     if (config.access_token != null) {
@@ -251,16 +258,16 @@ async function clone(config) {
       config.GitBranch = "master";
     }
     
-    runClone(config, url, dir);
+    runClone(config, url);
 
     if (!config.GitCloneSuccess) {
       config.GitBranch = "main";
-      runClone(config, url, dir);
+      runClone(config, url);
     }
 
     if (!config.GitCloneSuccess) {
       config.GitBranch = "main";
-      runClone(config, url, dir);
+      runClone(config, url);
     }
 
     if (!config.GitCloneSuccess) {
@@ -268,7 +275,7 @@ async function clone(config) {
       log("defaulting to " + url);
       config.GitBranch = "main";
       config.GitParimaStaticDeployed = true;
-      runClone(config, url, dir);
+      runClone(config, url);
     }
 
   } else {
@@ -278,10 +285,10 @@ async function clone(config) {
   return Promise.resolve(config);
 }
 
-function runClone(config, url, dir) {
+function runClone(config, url) {
 
   console.log("git clone --single-branch --branch " + config.GitBranch);
-  var command = "git clone --single-branch --branch " + config.GitBranch + " " + url + " " + dir + "/";
+  var command = "git clone --single-branch --branch " + config.GitBranch + " " + url + " " + config.TempDirectory + "/";
 
   try {
     var executionResult = execSync(command);
@@ -295,11 +302,12 @@ function runClone(config, url, dir) {
 async function buildHugo(config) {
     
     if (config.GitCloneSuccess && config.DeploymentType != null && config.DeploymentType.length > 0 && config.DeploymentType.startsWith("Hugo")) {
-        var command = "hugo --source /tmp/git --debug";
+        var command = "hugo --source " + config.TempDirectory + " --debug";
         
         try {
           execSync(command);
           config.HugoBuildSuccess = true;
+          config.SyncDirectory = config.TempDirectory + "/public";
         } catch(err) {
            config.HugoBuildSuccess = false;
         }
@@ -311,13 +319,11 @@ async function buildHugo(config) {
 async function syncFiles(config) {
   
   if (config.GitCloneSuccess) {
-    let nakedDir = getDirToSync(null);
-    let dir = getDirToSync(config.HugoVersion);
     
-    return getFiles(dir).then(files => {
+    let diff = config.SyncDirectory.replace(config.TempDirectory, "");
+    return getFiles(config.SyncDirectory).then(files => {
         
       let promises = [];
-      let directory = dir.replace(nakedDir, "");
       log("syncing website to " + config.S3Bucket + " as version " + config.WebsiteVersion);
       
       for (let file of files) {
@@ -325,7 +331,10 @@ async function syncFiles(config) {
         let key = file.substring(9);
         if (!key.startsWith(".git/")) {
           let contentType = exports.ext.getContentType(exports.ext.getExt(key));
-          var s3key = config.WebsiteVersion + "/" + key.substring(directory.length);
+          var s3key = config.WebsiteVersion + "/" + key;
+          if (diff.length > 0) {
+              s3key = s3key.replace(diff, "");
+          }
           
           var params = { Body: fs.createReadStream(file), Bucket: config.S3Bucket, Key: s3key, ContentType: contentType };
           promises.push(s3.putObject(params).promise());
@@ -350,9 +359,6 @@ async function syncFiles(config) {
   }
 }
 
-function getDirToSync(hugoVersion) {
-    return hugoVersion != null && hugoVersion.length > 0 ? "/tmp/git/public" : "/tmp/git";
-}
 function log(msg) {
   console.log(msg);
 }

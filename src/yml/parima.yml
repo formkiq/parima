@@ -14,7 +14,7 @@ Parameters:
     Default: ""
   WebsiteVersion:
     Type: String
-    Description: Required. Version website to deploy
+    Description: Optional. Website version (ignored if using Git)
     AllowedPattern: ".+"
     Default: "v1"
   GitRepositoryUrl:
@@ -31,7 +31,7 @@ Parameters:
     Default: "static"
     AllowedValues: 
       - "static"
-      - "Hugo-v0.76.3"
+      - "Hugo0.76.3"
   Caching:
     Description: Required. Caching Stategy used (see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-cache-policies.html)
     Default: "Managed-CachingDisabled"
@@ -95,7 +95,7 @@ Mappings:
   DeploymentTypeMap:
     "static":
       IMAGE: parima/layers/layer-hugo-0.76.3.zip
-    "Hugo-v0.76.3": 
+    "Hugo0.76.3": 
       IMAGE: parima/layers/layer-hugo-0.76.3.zip
 
 Conditions:
@@ -103,6 +103,8 @@ Conditions:
   HasEmail: !Not [ !Equals [ !Ref NotificationEmail, "" ]]
   NoCertificate: !Equals [ !Ref DomainName, "" ]
   StaticDeployment: !Equals [ !Ref DeploymentType, "static" ]
+  HasGitRepository: !Not [ !Equals [ !Ref GitRepositoryUrl, "" ]]
+  NoGitRepository: !Equals [ !Ref GitRepositoryUrl, "" ]
 
 Resources:
 
@@ -503,15 +505,18 @@ Outputs:
     Description: 'S3 Bucket'
     Value: !Ref S3Bucket
   SyncCommand:
+    Condition: NoGitRepository
     Description: 'Deploy local directory to Website'
     Value: !Sub "aws s3 sync . s3://${S3Bucket}/${WebsiteVersion}"
   InvalidateCache:
     Description: 'Invalidate Website Cache'
     Value: !If [HasCertificate, !Sub "aws cloudfront create-invalidation --distribution-id ${CloudFrontCertificateDistribution} --paths \"/*\"", !Sub "aws cloudfront create-invalidation --distribution-id ${CloudFrontDistribution} --paths \"/*\""]
   WebHookUrl:
+    Condition: HasGitRepository
     Description: 'Git Deployment Web Hook'
     Value: !Sub 'https://${WebhookApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/webhook'
   GithubOAuthUrl:
+    Condition: HasGitRepository
     Description: 'Give Parima access to private Git Repository'
     Value: !Sub 'https://oauth.formkiq.com/authorize?redirect_uri=${WebhookApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/webhook'
   DeploymentType:
