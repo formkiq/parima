@@ -4,10 +4,10 @@ Description: Parima {{version}} - Launch Your Website using AWS in Minutes (http
 
 Parameters:
 
-  NotificationEmail:
-    Type: String
-    Description: Optional. Email address that is sent website update notifications
-    Default: ""
+  # NotificationEmail:
+  #   Type: String
+  #   Description: Optional. Email address that is sent website update notifications
+  #   Default: ""
   DomainName:
     Type: String
     Description: Optional. Required for custom domain, e.g. www.yourcompany.com
@@ -17,6 +17,10 @@ Parameters:
     Description: Optional. Website version (ignored if using Git)
     AllowedPattern: ".+"
     Default: "v1"
+  GitDeploymentPath:
+    Type: String
+    Description: Optional. The path of the Git Repository to deploy, e.g. "public" or "dist"
+    Default: ""    
   GitRepositoryUrl:
     Type: String
     Description: Optional. Git Repository Url, e.g. https://github.com/YOUR-USERNAME/YOUR-REPOSITORY.git
@@ -100,7 +104,7 @@ Mappings:
 
 Conditions:
   HasCertificate: !Not [ !Equals [ !Ref DomainName, "" ]]
-  HasEmail: !Not [ !Equals [ !Ref NotificationEmail, "" ]]
+  # HasEmail: !Not [ !Equals [ !Ref NotificationEmail, "" ]]
   NoCertificate: !Equals [ !Ref DomainName, "" ]
   StaticDeployment: !Equals [ !Ref DeploymentType, "static" ]
   HasGitRepository: !Not [ !Equals [ !Ref GitRepositoryUrl, "" ]]
@@ -278,6 +282,7 @@ Resources:
       SyncCommand: !Sub "aws s3 sync . s3://${S3Bucket}/${WebsiteVersion}"
       GithubOAuthUrl: !Sub 'https://oauth.formkiq.com/authorize?redirect_uri=${WebhookApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/webhook'
       WebHookUrl: !Sub 'https://${WebhookApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/webhook'
+      GitDeploymentPath: !Ref GitDeploymentPath
 
   Certificate:
     Type: Custom::Certificate
@@ -437,55 +442,55 @@ Resources:
             Resource:
             - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/formkiq/parima/*"
 
-  VerifyEmailIdentity:
-    Type: Custom::VerifyEmailIdentity
-    Condition: HasEmail
-    Properties:
-      ServiceToken: !GetAtt VerifyEmailIdentityLambda.Arn
-      Email: !Ref NotificationEmail
+  # VerifyEmailIdentity:
+  #   Type: Custom::VerifyEmailIdentity
+  #   Condition: HasEmail
+  #   Properties:
+  #     ServiceToken: !GetAtt VerifyEmailIdentityLambda.Arn
+  #     Email: !Ref NotificationEmail
 
-  VerifyEmailIdentityLambda:
-    Type: AWS::Lambda::Function
-    Condition: HasEmail
-    Properties:
-      Runtime: nodejs12.x
-      Timeout: '300'
-      Handler: index.handler
-      Role: !GetAtt VerifyEmailIdentityLambdaRole.Arn
-      Tags:
-        - Key: "Application"
-          Value: "Parima"
-      Code:
-        ZipFile: |
-          {{verifyEmailIdentity}}
+  # VerifyEmailIdentityLambda:
+  #   Type: AWS::Lambda::Function
+  #   Condition: HasEmail
+  #   Properties:
+  #     Runtime: nodejs12.x
+  #     Timeout: '300'
+  #     Handler: index.handler
+  #     Role: !GetAtt VerifyEmailIdentityLambdaRole.Arn
+  #     Tags:
+  #       - Key: "Application"
+  #         Value: "Parima"
+  #     Code:
+  #       ZipFile: |
+  #         {{verifyEmailIdentity}}
 
-  VerifyEmailIdentityLambdaRole:
-    Type: AWS::IAM::Role
-    Condition: HasEmail
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-        - Effect: Allow
-          Principal:
-            Service:
-              - lambda.amazonaws.com
-          Action:
-            - sts:AssumeRole
-      Path: "/"
-      Policies:
-      - PolicyName: root
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            Action:
-            - logs:CreateLogGroup
-            - logs:CreateLogStream
-            - logs:PutLogEvents              
-            - ses:DeleteIdentity
-            - ses:VerifyEmailIdentity
-            Resource: '*'
+  # VerifyEmailIdentityLambdaRole:
+  #   Type: AWS::IAM::Role
+  #   Condition: HasEmail
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #       - Effect: Allow
+  #         Principal:
+  #           Service:
+  #             - lambda.amazonaws.com
+  #         Action:
+  #           - sts:AssumeRole
+  #     Path: "/"
+  #     Policies:
+  #     - PolicyName: root
+  #       PolicyDocument:
+  #         Version: '2012-10-17'
+  #         Statement:
+  #         - Effect: Allow
+  #           Action:
+  #           - logs:CreateLogGroup
+  #           - logs:CreateLogStream
+  #           - logs:PutLogEvents              
+  #           - ses:DeleteIdentity
+  #           - ses:VerifyEmailIdentity
+  #           Resource: '*'
 
 Outputs:
   Certificate:

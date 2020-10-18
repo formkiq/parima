@@ -66,9 +66,10 @@ function buildConfig(event) {
         obj.GitBranch = event.ResourceProperties.GitBranch;
         obj.S3Bucket = event.ResourceProperties.S3Bucket;
         obj.GithubOAuthUrl = event.ResourceProperties.GithubOAuthUrl;
-        obj.syncingCommand = event.ResourceProperties.SyncCommand;
+        obj.SyncCommand = event.ResourceProperties.SyncCommand;
         obj.WebHookUrl = event.ResourceProperties.WebHookUrl;
         obj.WebsiteVersion = event.ResourceProperties.WebsiteVersion;
+        obj.GitDeploymentPath = event.ResourceProperties.GitDeploymentPath;
 
         if (event.OldResourceProperties != null && event.OldResourceProperties.WebsiteVersion != null) {
           obj.HasWebsiteVersionChanged = event.OldResourceProperties.WebsiteVersion != event.ResourceProperties.WebsiteVersion;
@@ -129,15 +130,17 @@ module.exports.handler = async(event, context) => {
 };
 
 async function updateWebsiteVariables(config) {
+
   if (config.GitParimaStaticDeployed && config.GitCloneSuccess && fs.existsSync(config.TempDirectory + '/index.html')) {
-    var text = fs.readFileSync(config.TempDirectory + '/index.html', 'utf8');
+
+    var filename = config.GitRepositoryUrl != null && config.GitRepositoryUrl != "" ? "index-git-private.html" : "index.html";
+    var text = fs.readFileSync(config.TempDirectory + '/' + filename, 'utf8');
 
     text = text.replace(/{{GIT_AUTH_URL}}/g, config.GithubOAuthUrl);
-    text = text.replace(/{{ WebHookUrl }}/g, config.WebHookUrl);
-    text = text.replace(/{{ GithubRepoUrl }}/g, config.GitRepositoryUrl);
-    text = text.replace(/{{ SyncCommand }}/g, config.SyncCommand);
+    text = text.replace(/{{WebHookUrl}}/g, config.WebHookUrl);
+    text = text.replace(/{{GithubRepoUrl}}/g, config.GitRepositoryUrl);
+    text = text.replace(/{{SyncCommand}}/g, config.SyncCommand);
 
-    log(text);
     fs.writeFileSync(config.TempDirectory + '/index.html', text, 'utf8');
   }
 
@@ -307,7 +310,7 @@ async function buildHugo(config) {
         try {
           execSync(command);
           config.HugoBuildSuccess = true;
-          config.SyncDirectory = config.TempDirectory + "/public";
+          config.GitDeploymentPath = "public";
         } catch(err) {
            config.HugoBuildSuccess = false;
         }
@@ -320,11 +323,12 @@ async function syncFiles(config) {
   
   if (config.GitCloneSuccess) {
     
+    config.SyncDirectory = config.TempDirectory + "/" + config.GitDeploymentPath;
     let diff = config.SyncDirectory.replace(config.TempDirectory, "");
     return getFiles(config.SyncDirectory).then(files => {
         
       let promises = [];
-      log("syncing website to " + config.S3Bucket + " as version " + config.WebsiteVersion);
+      log("syncing " + config.SyncDirectory + " to " + config.S3Bucket + " as version " + config.WebsiteVersion);
       
       for (let file of files) {
           
@@ -332,7 +336,7 @@ async function syncFiles(config) {
         if (!key.startsWith(".git/")) {
           let contentType = exports.ext.getContentType(exports.ext.getExt(key));
           var s3key = config.WebsiteVersion + "/" + key;
-          if (diff.length > 0) {
+          if (diff.length > 1) {
               s3key = s3key.replace(diff, "");
           }
           
