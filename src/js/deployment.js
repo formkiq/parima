@@ -82,6 +82,22 @@ function buildConfig(event) {
       obj.SyncDirectory = "/tmp/git";
       obj.TempDirectory = "/tmp/git";
       
+      var body = event.body;
+      if (event.isBase64Encoded) {
+        let buff = new Buffer(data, 'base64');
+        body = buff.toString('utf-8');
+      }
+
+      try {
+        obj.body = JSON.parse(body);
+      } catch(err) {
+        obj.body = null;
+      }
+
+      if (obj.body != null) {
+
+      }
+
       console.log(JSON.stringify(obj));
       return Promise.resolve(obj);
     });
@@ -93,7 +109,7 @@ module.exports.handler = async(event, context) => {
 
   if (event.queryStringParameters != null && event.queryStringParameters.hasaccess != null) {
     return buildConfig(event)
-    .then((config) => {
+      .then((config) => {
       return getAccessToken(config);
     }).then((config) => {
       return { statusCode: config.access_token != null ? 200 : 404, headers:{'Access-Control-Allow-Origin':'*'}, body: "" };
@@ -101,7 +117,7 @@ module.exports.handler = async(event, context) => {
   }
 
   return buildConfig(event)
-  .then((config) => {
+    .then((config) => {
     return saveAccessToken(config);
   }).then((config) => {
     return getAccessToken(config);
@@ -240,47 +256,56 @@ async function updateGitWebsiteVersion(config) {
   return Promise.resolve(config);
 }
 
+function isCommitMatchBranch(config) {
+  let ref = config.body == null || config.body.ref == null ? "" : config.body.ref.toString();
+  return ref == "" || ref.endsWith(config.GitBranch) || (ref.endsWith("main") && config.GitBranch == "")
+    || (ref.endsWith("master") && config.GitBranch == "");
+}
+
 async function clone(config) {
 
-  if (config.GitRepositoryUrl != null) {
-    
-    fs.rmdirSync(config.TempDirectory, { recursive: true });
-    
-    var url = config.GitRepositoryUrl;
-    if (config.access_token != null) {
-        url = url.replace("https://", "https://" + config.access_token + "@");
-    }
-    
-    let deployMaster = config.GitBranch == "";
-    
-    if (deployMaster) {
-      config.GitBranch = "master";
-    }
-    
-    runClone(config, url);
+  if (isCommitMatchBranch(config)) {
 
-    if (!config.GitCloneSuccess) {
-      config.GitBranch = "main";
+    if (config.GitRepositoryUrl != null) {
+      
+      fs.rmdirSync(config.TempDirectory, { recursive: true });
+      
+      var url = config.GitRepositoryUrl;
+      if (config.access_token != null) {
+          url = url.replace("https://", "https://" + config.access_token + "@");
+      }
+      
+      let deployMaster = config.GitBranch == "";
+      
+      if (deployMaster) {
+        config.GitBranch = "master";
+      }
+      
       runClone(config, url);
-    }
 
-    if (!config.GitCloneSuccess) {
-      config.GitBranch = "main";
-      runClone(config, url);
-    }
+      if (!config.GitCloneSuccess) {
+        config.GitBranch = "main";
+        runClone(config, url);
+      }
 
-    if (!config.GitCloneSuccess) {
-      url = GIT_PARIMA_STATIC;
-      log("defaulting to " + url);
+      if (!config.GitCloneSuccess) {
+        config.GitBranch = "main";
+        runClone(config, url);
+      }
+
+      if (!config.GitCloneSuccess) {
+        url = GIT_PARIMA_STATIC;
+        log("defaulting to " + url);
+        config.GitBranch = "main";
+        config.GitParimaStaticDeployed = true;
+        runClone(config, url);
+      }
+
+    } else {
       config.GitBranch = "main";
       config.GitParimaStaticDeployed = true;
-      runClone(config, url);
+      runClone(config, GIT_PARIMA_STATIC);
     }
-
-  } else {
-    config.GitBranch = "main";
-    config.GitParimaStaticDeployed = true;
-    runClone(config, GIT_PARIMA_STATIC);
   }
   
   return Promise.resolve(config);
@@ -303,6 +328,7 @@ function runClone(config, url) {
 async function buildHugo(config) {
     
     if (config.GitCloneSuccess && config.DeploymentType != null && config.DeploymentType.length > 0 && config.DeploymentType.startsWith("Hugo")) {
+        console.log("building Hugo site");
         var command = "hugo --source " + config.TempDirectory + " --debug";
         
         try {

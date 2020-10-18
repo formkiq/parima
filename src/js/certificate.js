@@ -18,7 +18,8 @@ module.exports.handler = async(event, context) => {
 
         if (event.RequestType === 'Create') {
             let domainName = event.ResourceProperties.DomainName;
-            let hostedZone = domainName.substring(domainName.indexOf(".") + 1);
+            let domainParts = domainName.split(".");
+            let hostedZone = findHostedZoneFromString(domainName);
 
             return createCertificate(hostedZone, domainName).then((data) => {
                 console.log("adding certificate verification DNS entries");
@@ -53,7 +54,7 @@ module.exports.handler = async(event, context) => {
             let outputParameter = event.ResourceProperties.OutputParameter;
 
             let domainName = event.ResourceProperties.DomainName;
-            let hostedZone = domainName.substring(domainName.indexOf(".") + 1);
+            let hostedZone = findHostedZoneFromString(domainName);
 
             return findCertificateArn(stackName, outputParameter).then((certificateArn)=>{
                 return sendResponse(event, context, 'SUCCESS', { 'HostedZone': hostedZone, 'CertificateArn':certificateArn });
@@ -64,6 +65,12 @@ module.exports.handler = async(event, context) => {
     }
 };
 
+function findHostedZoneFromString(str) {
+    var arr = str.split(".");
+    var v0 = arr.pop();
+    var v1 = arr.pop();
+    return v0 && v1 ? v1 + "." + v0 : str;
+}
 async function findHostedZoneId(hostedZone) {
     return new Promise((resolve, reject) => {
         var params = {
