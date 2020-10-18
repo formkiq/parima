@@ -76,10 +76,6 @@ function buildConfig(event) {
         }
       }
       
-      if (event.RequestType === 'Create' && (obj.GitRepositoryUrl == null || obj.GitRepositoryUrl == "")) {
-        obj.GitRepositoryUrl = GIT_PARIMA_STATIC;
-      }
-      
       obj.GitParimaStaticDeployed = GIT_PARIMA_STATIC == obj.GitRepositoryUrl;
       obj.RequestType = event.RequestType;
       obj.ResourceProperties = event.ResourceProperties;
@@ -230,7 +226,7 @@ async function response(config) {
 
 async function updateGitWebsiteVersion(config) {
 
-  if (!config.HasWebsiteVersionChanged && config.GitCloneSuccess && config.GitRepositoryUrl != GIT_PARIMA_STATIC) {
+  if (!config.HasWebsiteVersionChanged && config.GitCloneSuccess && !config.GitParimaStaticDeployed) {
     var command = "git --git-dir " + config.TempDirectory + "/.git log --format=\"%H\" -n 1";
     try {
       var version = execSync(command).toString();
@@ -282,7 +278,9 @@ async function clone(config) {
     }
 
   } else {
-    config.GitCloneSuccess = false;
+    config.GitBranch = "main";
+    config.GitParimaStaticDeployed = true;
+    runClone(config, GIT_PARIMA_STATIC);
   }
   
   return Promise.resolve(config);
