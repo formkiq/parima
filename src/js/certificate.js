@@ -47,6 +47,9 @@ module.exports.handler = async(event, context) => {
             } else {
                 return findCertificateArn(stackName, outputParameter).then((certificateArn)=>{
                     return sendResponse(event, context, 'SUCCESS', { 'HostedZone': hostedZone, 'CertificateArn':certificateArn });
+                }).catch(error => { 
+                    console.log(error);
+                    return sendResponse(event, context, 'FAILED');
                 });
             }
         } else {
