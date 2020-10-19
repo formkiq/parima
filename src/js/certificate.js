@@ -18,22 +18,8 @@ module.exports.handler = async(event, context) => {
 
         if (event.RequestType === 'Create') {
             let domainName = event.ResourceProperties.DomainName;
-            let domainParts = domainName.split(".");
             let hostedZone = findHostedZoneFromString(domainName);
-
-            return createCertificate(hostedZone, domainName).then((data) => {
-                console.log("adding certificate verification DNS entries");
-                return updateRoute53Retry(hostedZone, data.CertificateArn);
-            }).then((certificate) => {
-                console.log("waiting DNS to be updated so certificate can be validated");
-                return waitForValidation(certificate);
-            }).then((certificate)=>{
-                console.log("certificate has been validated");
-                return sendResponse(event, context, 'SUCCESS', { 'HostedZone': hostedZone, 'CertificateArn': certificate.Certificate.CertificateArn})
-            }).catch(error => { 
-                console.log(error);
-                return sendResponse(event, context, 'FAILED');
-            });
+            return processCreate(event, context, hostedZone, domainName);
             
         } else if (event.RequestType === 'Delete') {
             
@@ -43,7 +29,7 @@ module.exports.handler = async(event, context) => {
             return findCertificateArn(stackName, outputParameter).then((certificateArn)=>{
                 return deleteCertificateRetry(certificateArn);
             }).then((certificate)=>{
-                return sendResponse(event, context, 'SUCCESS', { })
+                return sendResponse(event, context, 'SUCCESS', { });
             }).catch(error => { 
                 console.log(error);
                 return sendResponse(event, context, 'FAILED');
@@ -56,14 +42,34 @@ module.exports.handler = async(event, context) => {
             let domainName = event.ResourceProperties.DomainName;
             let hostedZone = findHostedZoneFromString(domainName);
 
-            return findCertificateArn(stackName, outputParameter).then((certificateArn)=>{
-                return sendResponse(event, context, 'SUCCESS', { 'HostedZone': hostedZone, 'CertificateArn':certificateArn });
-            });
+            if (event.OldResourceProperties != null && event.ResourceProperties.DomainName != event.OldResourceProperties.DomainName) {
+                 return processCreate(event, context, hostedZone, domainName);
+            } else {
+                return findCertificateArn(stackName, outputParameter).then((certificateArn)=>{
+                    return sendResponse(event, context, 'SUCCESS', { 'HostedZone': hostedZone, 'CertificateArn':certificateArn });
+                });
+            }
         } else {
             return sendResponse(event, context, 'FAILED');
         }
     }
 };
+
+function processCreate(event, context, hostedZone, domainName) {
+    return createCertificate(hostedZone, domainName).then((data) => {
+        console.log("adding certificate verification DNS entries");
+        return updateRoute53Retry(hostedZone, data.CertificateArn);
+    }).then((certificate) => {
+        console.log("waiting DNS to be updated so certificate can be validated");
+        return waitForValidation(certificate);
+    }).then((certificate)=>{
+        console.log("certificate has been validated");
+        return sendResponse(event, context, 'SUCCESS', { 'HostedZone': hostedZone, 'CertificateArn': certificate.Certificate.CertificateArn});
+    }).catch(error => { 
+        console.log(error);
+        return sendResponse(event, context, 'FAILED');
+    });
+}
 
 function findHostedZoneFromString(str) {
     var arr = str.split(".");
@@ -233,7 +239,7 @@ async function sendResponse (event, context, responseStatus, responseData) {
             'content-type': '',
             'content-length': responseBody.length
         }
-    }
+    };
 
     const promise = new Promise(function(resolve, reject) {
 
@@ -250,7 +256,6 @@ async function sendResponse (event, context, responseStatus, responseData) {
             });
 
         }).on('error', (e) => {
-            let text = JSON.stringify(e);
             resolve([{
                 message: "Unable to send message"
             }, 502, null]);
