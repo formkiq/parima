@@ -1,0 +1,47 @@
+{
+    "version": "2.0",
+    "routeKey": "GET /webhook",
+    "rawPath": "/webhook",
+    "rawQueryString": "",
+    "cookies": [
+        "s_sess=%20s_cc%3Dtrue%3B%20s_sq%3D%3B",
+        "pN=3"
+    ],
+    "headers": {
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "accept-encoding": "gzip, deflate, br",
+        "accept-language": "en-US,en;q=0.5",
+        "content-length": "0",
+        "dnt": "1",
+        "host": "XXXXXXXXXXXXXX.execute-api.us-east-2.amazonaws.com",
+        "referer": "https://XXXXXXXXXXXXXX.cloudfront.net/",
+        "upgrade-insecure-requests": "1",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:81.0) Gecko/20100101 Firefox/81.0",
+        "x-amzn-trace-id": "Root=1-5f8f2aef-294f00111fc8f07e742b45f2",
+        "x-forwarded-for": "1.1.1.1",
+        "x-forwarded-port": "443",
+        "x-forwarded-proto": "https"
+    },
+    "queryStringParameters": {
+    },
+    "requestContext": {
+        "accountId": "622653865277",
+        "apiId": "XXXXXXXXXXXXXX",
+        "domainName": "XXXXXXXXXXXXXX.execute-api.us-east-2.amazonaws.com",
+        "domainPrefix": "XXXXXXXXXXXXXX",
+        "http": {
+            "method": "GET",
+            "path": "/webhook",
+            "protocol": "HTTP/1.1",
+            "sourceIp": "1.1.1.1",
+            "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:81.0) Gecko/20100101 Firefox/81.0"
+        },
+        "requestId": "UuOlXjW2CYcEM0A=",
+        "routeKey": "GET /webhook",
+        "stage": "$default",
+        "time": "20/Oct/2020:18:22:39 +0000",
+        "timeEpoch": 1603218159041
+    },
+    "isBase64Encoded": false,
+    "body":"{\"ref\":\"refs/heads/dev\",\"before\":\"e2b209159626a4d81e6f2375be7be71ba543ab87\",\"after\":\"3449744452c56df5215fd6eb85b6e18aae7090b8\"}"
+}

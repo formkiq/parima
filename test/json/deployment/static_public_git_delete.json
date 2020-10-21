@@ -1,0 +1,23 @@
+{
+    "RequestType": "Delete",
+    "ServiceToken": "arn:aws:lambda:us-east-2:11111111111:function:parima-DeploymentLambda-N65P49QC57DL",
+    "ResponseURL": "http://localhost:9001/responseURL",
+    "StackId": "arn:aws:cloudformation:us-east-2:11111111111:stack/parima/02de05a0-1284-11eb-b5e2-027e611afa34",
+    "RequestId": "e439e242-fc7f-4f09-a9c7-51d6ece1731c",
+    "LogicalResourceId": "DeploymentLambdaResource",
+    "PhysicalResourceId": "arn:aws:cloudformation:us-east-2:11111111111:stack/parima/02de05a0-1284-11eb-b5e2-027e611afa34-DeploymentLambdaResource",
+    "ResourceType": "Custom::DeploymentLambda",
+    "ResourceProperties": {
+        "ServiceToken": "arn:aws:lambda:us-east-2:11111111111:function:parima-DeploymentLambda-N65P49QC57DL",
+        "GitDeploymentPath": "",
+        "S3Bucket": "parima",
+        "SyncCommand": "aws s3 sync . s3://parima/v1",
+        "GitRepositoryUrl": "https://github.com/formkiq/parima",
+        "WebsiteVersion": "v1",
+        "WebHookUrl": "https://XXXXXXXXXXXXXx.execute-api.us-east-2.amazonaws.com/webhook",
+        "GitBranch": "",
+        "DeploymentType": "static",
+        "GithubOAuthUrl": "https://oauth.formkiq.com/authorize?redirect_uri=XXXXXXXXXXXXX.execute-api.us-east-2.amazonaws.com/webhook",
+        "StackName": "parima"
+    }
+}

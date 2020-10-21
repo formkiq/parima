@@ -2,13 +2,15 @@
  * Deployment
  */
 const AWS = require('aws-sdk');
-var cloudformation = new AWS.CloudFormation();
-const s3 = new AWS.S3();
-const ssm = new AWS.SSM();
-const cf = new AWS.CloudFormation();
+var s3;
+var ssm;
+var cf;
 const fs = require('fs');
 const cp = require('child_process');
 const execSync = cp.execSync;
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
+const fsp = require('fs').promises;
 
 const { resolve } = require('path');
 const { readdir } = fs.promises;
@@ -94,10 +96,6 @@ function buildConfig(event) {
         obj.body = null;
       }
 
-      if (obj.body != null) {
-
-      }
-
       console.log(JSON.stringify(obj));
       return Promise.resolve(obj);
     });
@@ -106,6 +104,10 @@ function buildConfig(event) {
 module.exports.handler = async(event, context) => {
   
   log(JSON.stringify(event));
+
+  s3 = new AWS.S3();
+  ssm = new AWS.SSM();
+  cf = new AWS.CloudFormation();
 
   if (event.queryStringParameters != null && event.queryStringParameters.hasaccess != null) {
     return buildConfig(event)
@@ -123,8 +125,8 @@ module.exports.handler = async(event, context) => {
     return getAccessToken(config);
   }).then((config) => {
     return clone(config);
-  }).then((config) => {
-    return updateWebsiteVariables(config);
+   }).then((config) => {
+     return updateWebsiteVariables(config);
   }).then((config) => {
     return updateGitWebsiteVersion(config);
   }).then((config) => {
@@ -137,7 +139,7 @@ module.exports.handler = async(event, context) => {
     return event.RequestType != null ? sendResponse(event, context, 'SUCCESS',{'WebsiteVersion': config.WebsiteVersion}) : response(config);
   }).catch(error => { 
     log(error);
-    return event.RequestType != null ? sendResponse(event, context, 'FAILED') : { statusCode: 400, body: JSON.stringify('invalid access token') };
+    return event.RequestType != null ? sendResponse(event, context, 'FAILED') : { statusCode: 400, body: JSON.stringify('bad request') };
   });
 };
 
@@ -146,14 +148,17 @@ async function updateWebsiteVariables(config) {
   if (config.GitParimaStaticDeployed && config.GitCloneSuccess && fs.existsSync(config.TempDirectory + '/index.html')) {
 
     var filename = config.GitRepositoryUrl != null && config.GitRepositoryUrl != "" ? "index-git-private.html" : "index.html";
-    var text = fs.readFileSync(config.TempDirectory + '/' + filename, 'utf8');
+    return fsp.readFile(config.TempDirectory + '/' + filename).then((txt) => {
+      var text = txt.toString();
+      text = text.replace(/{{GIT_AUTH_URL}}/g, config.GithubOAuthUrl);
+      text = text.replace(/{{WebHookUrl}}/g, config.WebHookUrl);
+      text = text.replace(/{{GithubRepoUrl}}/g, config.GitRepositoryUrl);
+      text = text.replace(/{{SyncCommand}}/g, config.SyncCommand);
 
-    text = text.replace(/{{GIT_AUTH_URL}}/g, config.GithubOAuthUrl);
-    text = text.replace(/{{WebHookUrl}}/g, config.WebHookUrl);
-    text = text.replace(/{{GithubRepoUrl}}/g, config.GitRepositoryUrl);
-    text = text.replace(/{{SyncCommand}}/g, config.SyncCommand);
-
-    fs.writeFileSync(config.TempDirectory + '/index.html', text, 'utf8');
+      return fsp.writeFile(config.TempDirectory + '/index.html', text, 'utf8').then(()=>{
+        return Promise.resolve(config);      
+      });
+    });
   }
 
   return Promise.resolve(config);
@@ -167,7 +172,7 @@ async function saveAccessToken(config) {
       Overwrite: true,
       Type: "SecureString"
     };
-    
+
     return ssm.putParameter(params).promise().then((data) => {
       return Promise.resolve(config);
     });
@@ -194,6 +199,10 @@ async function getAccessToken(config) {
       });
     });
   } else {
+    // ignore test access token
+    if (config.access_token == "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+      config.access_token = null;
+    }
     return Promise.resolve(config);
   }
 }
@@ -210,44 +219,52 @@ async function updateCloudFormation(config) {
     UsePreviousTemplate: true
   };
 
-  var newWebsiteVersion = "";
-  for (let param of config.CloudFormationParameters) {
-    if (param.ParameterKey == "WebsiteVersion") {
-      newWebsiteVersion = param.ParameterValue;
-      params.Parameters.push({ParameterKey: param.ParameterKey, ParameterValue: config.WebsiteVersion});
-    } else {
-      params.Parameters.push({ParameterKey: param.ParameterKey, UsePreviousValue:true});
-    }
-  }
-
   // ignore CloudFormation custom resource
-  if (config.RequestType == null && newWebsiteVersion != config.WebsiteVersion) {
-    console.log("updating website from " + config.WebsiteVersion + " to " + newWebsiteVersion);
-    return cloudformation.updateStack(params).promise().then(()=>{
+  if (config.HasWebsiteVersionChanged && config.RequestType == null) {
+    var oldWebsiteVersion = "";
+    for (let param of config.CloudFormationParameters) {
+      if (param.ParameterKey == "WebsiteVersion") {
+        oldWebsiteVersion = param.ParameterValue;
+        params.Parameters.push({ParameterKey: param.ParameterKey, ParameterValue: config.WebsiteVersion});
+      } else {
+        params.Parameters.push({ParameterKey: param.ParameterKey, UsePreviousValue:true});
+      }
+    }
+
+    console.log("updating website from " + oldWebsiteVersion + " to " + config.WebsiteVersion);
+    return cf.updateStack(params).promise().then(()=>{
+      return Promise.resolve(config);
+    }).catch(error => { 
       return Promise.resolve(config);
     });
+    
   } else {
     return Promise.resolve(config);
   }
 }
 
 async function response(config) {
-
-  if (config.queryParameters.access_token != null) {
-    return  { statusCode: 301, headers:{Location: config.WebsiteUrl}, body: "" };
+  if (config.queryParameters != null && config.queryParameters.access_token != null) {
+    return  Promise.resolve({ statusCode: 301, headers:{Location: config.WebsiteUrl}, body: "" });
   }
 
-  return  { statusCode: 200, body: "" };
+  let body = config.GitCloneSuccess ? {WebsiteVersion: config.WebsiteVersion} : {};
+  return Promise.resolve({ statusCode: 200, body: JSON.stringify(body) });
 }
 
 async function updateGitWebsiteVersion(config) {
 
   if (!config.HasWebsiteVersionChanged && config.GitCloneSuccess && !config.GitParimaStaticDeployed) {
     var command = "git --git-dir " + config.TempDirectory + "/.git log --format=\"%H\" -n 1";
+
     try {
+
       var version = execSync(command).toString();
+      version = version.length > 9 ? version.substring(0,9) : version;
       log("found website version " + version);
+      config.HasWebsiteVersionChanged = version != config.WebsiteVersion;
       config.WebsiteVersion = version.length > 9 ? version.substring(0,9) : version;
+
     } catch(err) {
       log("updateGitWebsiteVersion: " + err);
     }
@@ -256,72 +273,96 @@ async function updateGitWebsiteVersion(config) {
   return Promise.resolve(config);
 }
 
+function hasValue(obj) {
+  return obj != null && obj != "";
+}
+
 function isCommitMatchBranch(config) {
-  let ref = config.body == null || config.body.ref == null ? "" : config.body.ref.toString();
-  return ref == "" || ref.endsWith(config.GitBranch) || (ref.endsWith("main") && config.GitBranch == "")
-    || (ref.endsWith("master") && config.GitBranch == "");
+  let ref = hasValue(config.body) && hasValue(config.body.ref) ? config.body.ref.toString() : "";
+  let isRefMaster = ref.endsWith("master") || ref.endsWith("main");
+  let isGitBranchMaster = config.GitBranch == "" || config.GitBranch == "master" || config.GitBranch == "main";
+
+  if (!hasValue(ref) || (isRefMaster && isGitBranchMaster) || (config.GitBranch != "" && ref.endsWith(config.GitBranch))) {
+    return true;
+  }
+
+  return false;
 }
 
 async function clone(config) {
 
   if (isCommitMatchBranch(config)) {
 
-    if (config.GitRepositoryUrl != null) {
-      
-      fs.rmdirSync(config.TempDirectory, { recursive: true });
+    if (hasValue(config.GitRepositoryUrl)) {
       
       var url = config.GitRepositoryUrl;
       if (config.access_token != null) {
           url = url.replace("https://", "https://" + config.access_token + "@");
       }
       
-      let deployMaster = config.GitBranch == "";
+      let deployMaster = !hasValue(config.GitBranch);
       
       if (deployMaster) {
         config.GitBranch = "master";
       }
       
-      runClone(config, url);
+      return fsp.rmdir(config.TempDirectory, { recursive: true }).then(() => {
+        return runClone(config, url);
+      }).then((config) => {
 
-      if (!config.GitCloneSuccess) {
-        config.GitBranch = "main";
-        runClone(config, url);
-      }
+        if (!config.GitCloneSuccess && deployMaster) {
+          config.GitBranch = "main";
+          return runClone(config, url);
+        } else {
+          return Promise.resolve(config);
+        }
 
-      if (!config.GitCloneSuccess) {
-        config.GitBranch = "main";
-        runClone(config, url);
-      }
+      }).then((config) => {
 
-      if (!config.GitCloneSuccess) {
-        url = GIT_PARIMA_STATIC;
-        log("defaulting to " + url);
-        config.GitBranch = "main";
-        config.GitParimaStaticDeployed = true;
-        runClone(config, url);
-      }
+        if (!config.GitCloneSuccess) {
+          url = GIT_PARIMA_STATIC;
+          config.GitBranch = "main";
+          config.GitParimaStaticDeployed = true;
+          return runClone(config, url);
+
+        } else {
+          return Promise.resolve(config);
+        }
+      });
 
     } else {
-      config.GitBranch = "main";
-      config.GitParimaStaticDeployed = true;
-      runClone(config, GIT_PARIMA_STATIC);
+
+      if (config.RequestType != null && config.RequestType == "Create") {
+        config.GitBranch = "main";
+        config.GitParimaStaticDeployed = true;
+        return fsp.rmdir(config.TempDirectory, { recursive: true }).then(() => {
+          return runClone(config, GIT_PARIMA_STATIC);
+        });
+      } else {
+        return Promise.resolve(config);
+      }
     }
+
+  } else {
+    return Promise.resolve(config);
   }
-  
-  return Promise.resolve(config);
 }
 
-function runClone(config, url) {
+async function runClone(config, url) {
 
   console.log("git clone --single-branch --branch " + config.GitBranch);
   var command = "git clone --single-branch --branch " + config.GitBranch + " " + url + " " + config.TempDirectory + "/";
 
-  try {
-    var executionResult = execSync(command);
-    console.log(executionResult.toString());
-    config.GitCloneSuccess = true;
-  } catch(err) {
-    config.GitCloneSuccess = false;
+  if (!config.GitCloneSuccess) {
+    return exec(command).then(() => {
+      config.GitCloneSuccess = true;
+      return Promise.resolve(config);
+    }).catch(error => { 
+      config.GitCloneSuccess = false;
+      return Promise.resolve(config);
+    });
+  } else {
+    return Promise.resolve(config);
   }
 }
 
@@ -355,25 +396,26 @@ async function syncFiles(config) {
       log("syncing " + config.SyncDirectory + " to " + config.S3Bucket + " as version " + config.WebsiteVersion);
       
       for (let file of files) {
-          
-        let key = file.substring(9);
-        if (!key.startsWith(".git/")) {
-          let contentType = exports.ext.getContentType(exports.ext.getExt(key));
-          var s3key = config.WebsiteVersion + "/" + key;
-          if (diff.length > 1) {
-              s3key = s3key.replace(diff, "");
-          }
-          
-          var params = { Body: fs.createReadStream(file), Bucket: config.S3Bucket, Key: s3key, ContentType: contentType };
-          promises.push(s3.putObject(params).promise());
-          
-          if (key.endsWith("index.html")) {
+        
+        if (fs.lstatSync(file).isFile()) {
+
+          let key = file.substring(9);
+          if (!key.startsWith(".git/")) {
+            let contentType = exports.ext.getContentType(exports.ext.getExt(key));
+            var s3key = config.WebsiteVersion + "/" + key;
+            if (diff.length > 1) {
+                s3key = s3key.replace(diff, "");
+            }
+
+            promises.push(putS3Object(config, file, s3key, contentType));
+            
+            if (key.endsWith("index.html")) {
               s3key = s3key.replace("/index.html", "");
 
               if (s3key != config.WebsiteVersion) {
-                var bparams = { Body: fs.createReadStream(file), Bucket: config.S3Bucket, Key: s3key, ContentType: contentType };
-                promises.push(s3.putObject(bparams).promise());
+                promises.push(putS3Object(config, file, s3key, contentType));
               }
+            }
           }
         }
       }
@@ -385,6 +427,15 @@ async function syncFiles(config) {
   } else {
     return Promise.resolve(config);
   }
+}
+
+function putS3Object(config, file, s3key, contentType) {
+
+  var content = fs.readFileSync(file);
+  var params = { Body: content, Bucket: config.S3Bucket, Key: s3key, ContentType: contentType };
+  return s3.putObject(params).promise().catch(error => { 
+    return Promise.resolve(config);
+  });
 }
 
 function log(msg) {
@@ -475,7 +526,6 @@ exports.ext = function () {
 }();
 
 async function sendResponse (event, context, responseStatus, responseData) {
-    var https = require('https');
     var url = require('url');
     
     var responseBody = JSON.stringify({
@@ -491,7 +541,7 @@ async function sendResponse (event, context, responseStatus, responseData) {
     var parsedUrl = url.parse(event.ResponseURL);
     var options = {
         hostname: parsedUrl.hostname,
-        port: 443,
+        port: parsedUrl.port != null ? parsedUrl.port : 443,
         path: parsedUrl.path,
         method: 'PUT',
         headers: {
@@ -499,6 +549,8 @@ async function sendResponse (event, context, responseStatus, responseData) {
             'content-length': responseBody.length
         }
     };
+
+    var https = parsedUrl.protocol.includes("https") ? require('https') : require('http');
 
     const promise = new Promise(function(resolve, reject) {
 

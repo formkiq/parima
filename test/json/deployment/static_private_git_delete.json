@@ -1,0 +1,23 @@
+{
+    "RequestType": "Delete",
+    "ServiceToken": "arn:aws:lambda:us-east-2:622653865277:function:parima-DeploymentLambda-138861D5G6RT7",
+    "ResponseURL": "http://localhost:9001/responseURL",
+    "StackId": "arn:aws:cloudformation:us-east-2:622653865277:stack/parima/545be2c0-12e9-11eb-b2d8-0a86fd141a00",
+    "RequestId": "20fda117-23b2-4e79-a2fe-5a9a6f08361d",
+    "LogicalResourceId": "DeploymentLambdaResource",
+    "PhysicalResourceId": "arn:aws:cloudformation:us-east-2:622653865277:stack/parima/545be2c0-12e9-11eb-b2d8-0a86fd141a00-DeploymentLambdaResource",
+    "ResourceType": "Custom::DeploymentLambda",
+    "ResourceProperties": {
+        "ServiceToken": "arn:aws:lambda:us-east-2:622653865277:function:parima-DeploymentLambda-138861D5G6RT7",
+        "GitDeploymentPath": "",
+        "S3Bucket": "parima-s3bucket-fdy0lsgqcsa3",
+        "SyncCommand": "aws s3 sync . s3://parima-s3bucket-fdy0lsgqcsa3/v1",
+        "GitRepositoryUrl": "https://github.com/CowbellDotClick/lank.git",
+        "WebsiteVersion": "v1",
+        "WebHookUrl": "https://xhquj2snnb.execute-api.us-east-2.amazonaws.com/webhook",
+        "GitBranch": "",
+        "DeploymentType": "static",
+        "GithubOAuthUrl": "https://oauth.formkiq.com/authorize?redirect_uri=xhquj2snnb.execute-api.us-east-2.amazonaws.com/webhook",
+        "StackName": "parima"
+    }
+}

@@ -339,8 +339,8 @@ Resources:
         - Key: "Application"
           Value: "Parima"
       Code:
-        ZipFile: |
-          {{certificate}}
+        S3Bucket: !FindInMap [RegionMap, !Ref "AWS::Region", BUCKET]
+        S3Key: "parima/v1.2/certificate.zip"
 
   LayerDeployment:
     Type: AWS::Serverless::LayerVersion

@@ -1,4 +1,6 @@
 const gulp = require('gulp');
+const zip = require('gulp-zip');
+const rename = require("gulp-rename");
 const uglify = require('gulp-uglify-es').default;
 const replace = require('gulp-token-replace');
 const fs = require('fs');
@@ -10,16 +12,28 @@ function buildUglify(cb) {
   	cb();
 }
 
+function buildDeploymentZip(cb) {
+    return gulp.src('./build/deployment.js')
+     	.pipe(rename("index.js"))
+        .pipe(zip('deployment.zip'))
+        .pipe(gulp.dest('build'));
+    cb();
+}
+
+function buildCertificateZip(cb) {
+    return gulp.src('./build/certificate.js')
+     	.pipe(rename("index.js"))
+        .pipe(zip('certificate.zip'))
+        .pipe(gulp.dest('build'));
+    cb();
+}
+
 function buildCloudFormation(cb) {
 
-	var certificate = fs.readFileSync("build/certificate.js", "utf8");
-	var deployment = fs.readFileSync("build/deployment.js", "utf8");
 	var verifyEmailIdentity = fs.readFileSync("build/verifyEmailIdentity.js", "utf8");
 
   	var config = {
 	  	"version":"v1.2",
-	  	"certificate":certificate,
-	  	"deployment":deployment,
 	  	"verifyEmailIdentity":verifyEmailIdentity
 	}
 	
@@ -30,4 +44,4 @@ function buildCloudFormation(cb) {
   	cb();
 }
 
-exports.default = gulp.series(buildUglify, buildCloudFormation)
+exports.default = gulp.series(buildUglify, buildCloudFormation, buildDeploymentZip, buildCertificateZip)

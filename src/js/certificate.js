@@ -1,19 +1,26 @@
 // CloudFormation Custom Resource for generating SSL Certificate in the us-east-1 region
-const AWS = require('aws-sdk');
-var acm = new AWS.ACM();
-var route53 = new AWS.Route53();
-var cloudformation = new AWS.CloudFormation();
+var AWS = require('aws-sdk');
+var acm;
+var route53;
+var cloudformation;
 
 const wait = interval => new Promise(resolve => setTimeout(resolve, interval));
 
 module.exports.handler = async(event, context) => {
+    
     console.log(JSON.stringify(event));
+
     if (event.RequestType != null) {
+
+        route53 = new AWS.Route53();
+        cloudformation = new AWS.CloudFormation();
 
         let region = event.ResourceProperties.Region;
         if (region != null) {
             acm = new AWS.ACM({region:region});
             console.log("using region: " + region);
+        } else {
+            acm = new AWS.ACM();
         }
 
         if (event.RequestType === 'Create') {
@@ -55,6 +62,9 @@ module.exports.handler = async(event, context) => {
         } else {
             return sendResponse(event, context, 'FAILED');
         }
+
+    } else {
+        return Promise.resolve({ statusCode: 400, body: "Missing 'RequestType'" });
     }
 };
 
@@ -83,11 +93,14 @@ function findHostedZoneFromString(str) {
 async function findHostedZoneId(hostedZone) {
     return new Promise((resolve, reject) => {
         var params = {
-            DNSName: hostedZone
+            DNSName: hostedZone + "."
         };
+        
         route53.listHostedZonesByName(params, function(err, data) {
           if (err) {
               reject(err);
+          } else if (data.HostedZones.length == 0) {
+              reject("No Route 53 HostedZone found for " + hostedZone);
           } else {
               resolve(data.HostedZones[0].Id);
           }
@@ -107,11 +120,11 @@ async function updateRoute53Retry(hostedZone, certificateArn, retriesLeft = 10, 
     return certificateArn;
 
   } catch (error) {
-    await wait(interval);
+    await wait(process.env.TEST ? 0 : interval);
     if (retriesLeft === 0) {
       return Promise.reject('Maximum retries exceeded!');
     }
-    return updateRoute53Retry(hostedZone, certificateArn, --retriesLeft, interval);
+    return process.env.TEST ? certificateArn : updateRoute53Retry(hostedZone, certificateArn, --retriesLeft, interval);
   }
 }
 
@@ -148,17 +161,19 @@ async function updateRoute53(hostedZoneId, certificate) {
 }
 
 async function waitForValidation(certificateArn) {
-    return acm.waitFor('certificateValidated', {CertificateArn: certificateArn}).promise();
+    return process.env.TEST ? Promise.resolve({Certificate: {CertificateArn: certificateArn}}) : acm.waitFor('certificateValidated', {CertificateArn: certificateArn}).promise();
 }
 
 async function findCertificateArn(stackName, outputParameter) {
     var params = {
       StackName: stackName
     };
+    
     return new Promise((resolve, reject) => {
         cloudformation.describeStacks(params, function(err, data) {
-          if (err) reject(err);
-          else {
+          if (err) {
+            reject(err);
+          } else {
               var value = "";
               for (let output of data.Stacks[0].Outputs) {
                   if (output.OutputKey == outputParameter) {
@@ -168,6 +183,9 @@ async function findCertificateArn(stackName, outputParameter) {
 
               if (value != "") {
                 resolve(value);
+                // used for unit test
+              } else if (process.env.CertificateArn != null && process.env.CertificateArn != "") {
+                resolve(process.env.CertificateArn);
               } else {
                 reject(value);
               }
@@ -183,11 +201,11 @@ async function deleteCertificateRetry(certificateArn, retriesLeft = 30, interval
     return await deleteCertificate(certificateArn);
 
   } catch (error) {
-    await wait(interval);
+    await wait(process.env.TEST ? 0 : interval);
     if (retriesLeft === 0) {
       return Promise.reject('Maximum retries exceeded!');
     }
-    return deleteCertificateRetry(certificateArn, --retriesLeft, interval);
+    return process.env.TEST ? Promise.reject('Maximum retries exceeded!') : deleteCertificateRetry(certificateArn, --retriesLeft, interval);
   }
 }
 
@@ -219,7 +237,6 @@ async function createCertificate(hostedZone, domainname) {
 }
 
 async function sendResponse (event, context, responseStatus, responseData) {
-    var https = require('https');
     var url = require('url');
     
     var responseBody = JSON.stringify({
@@ -235,7 +252,7 @@ async function sendResponse (event, context, responseStatus, responseData) {
     var parsedUrl = url.parse(event.ResponseURL);
     var options = {
         hostname: parsedUrl.hostname,
-        port: 443,
+        port: parsedUrl.port != null ? parsedUrl.port : 443,
         path: parsedUrl.path,
         method: 'PUT',
         headers: {
@@ -243,6 +260,8 @@ async function sendResponse (event, context, responseStatus, responseData) {
             'content-length': responseBody.length
         }
     };
+
+    var https = parsedUrl.protocol.includes("https") ? require('https') : require('http');
 
     const promise = new Promise(function(resolve, reject) {
 
