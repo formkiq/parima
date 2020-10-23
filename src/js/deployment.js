@@ -5,6 +5,7 @@ const AWS = require('aws-sdk');
 var s3;
 var ssm;
 var cf;
+var cloudfront;
 const fs = require('fs');
 const cp = require('child_process');
 const execSync = cp.execSync;
@@ -60,6 +61,7 @@ function buildConfig(event) {
       }
       
       obj.HasWebsiteVersionChanged = false;
+      obj.CreateInvalidation = false;
 
       if (event.ResourceProperties != null) {
         obj.RequestType = event.RequestType;
@@ -108,6 +110,7 @@ module.exports.handler = async(event, context) => {
   s3 = new AWS.S3();
   ssm = new AWS.SSM();
   cf = new AWS.CloudFormation();
+  cloudfront = new AWS.CloudFront();
 
   if (event.queryStringParameters != null && event.queryStringParameters.hasaccess != null) {
     return buildConfig(event)
@@ -136,7 +139,9 @@ module.exports.handler = async(event, context) => {
   }).then((config) => {
     return updateCloudFormation(config);
   }).then((config) => {
-    return event.RequestType != null ? sendResponse(event, context, 'SUCCESS',{'WebsiteVersion': config.WebsiteVersion}) : response(config);
+    return createInvalidation(config);
+  }).then((config) => {
+    return event.RequestType != null ? sendResponse(event, context, 'SUCCESS',{'WebsiteVersion': config.WebsiteVersion, 'CreateInvalidation': config.CreateInvalidation}) : response(config);
   }).catch(error => { 
     log(error);
     return event.RequestType != null ? sendResponse(event, context, 'FAILED') : { statusCode: 400, body: JSON.stringify('bad request') };
@@ -243,12 +248,35 @@ async function updateCloudFormation(config) {
   }
 }
 
+async function createInvalidation(config) {
+  if (config.RequestType != "Create" && config.HasWebsiteVersionChanged && config.Caching != "Managed-CachingDisabled") {
+    var params = {
+      DistributionId: config.CloudFrontDistributionId,
+      InvalidationBatch: {
+        CallerReference: config.WebsiteVersion,
+        Paths: {Quantity: 1,Items: ['/*']}
+      }
+    };
+
+    config.CreateInvalidation = true;
+
+    return cloudfront.createInvalidation(params).promise().then(()=> {
+      return Promise.resolve(config);
+    }).catch(error => { 
+      return Promise.resolve(config);
+    });
+
+  } else {
+    return Promise.resolve(config);
+  }
+}
+
 async function response(config) {
   if (config.queryParameters != null && config.queryParameters.access_token != null) {
     return  Promise.resolve({ statusCode: 301, headers:{Location: config.WebsiteUrl}, body: "" });
   }
 
-  let body = config.GitCloneSuccess ? {WebsiteVersion: config.WebsiteVersion} : {};
+  let body = {WebsiteVersion: config.WebsiteVersion, 'CreateInvalidation': config.CreateInvalidation};
   return Promise.resolve({ statusCode: 200, body: JSON.stringify(body) });
 }
 

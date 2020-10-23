@@ -1,5 +1,7 @@
 var http = require('http');
 var mockserver = require('mockserver');
+const cp = require('child_process');
+const execSync = cp.execSync;
 
 const AWS = require('aws-sdk');
 const fs = require('fs').promises;
@@ -45,13 +47,14 @@ describe('Deployment', async()  => {
 		assert.equal(200, response[1]);
 		assert.equal("SUCCESS", body.Status);
 		assert.equal("v1", body.Data.WebsiteVersion);
+		assert.ok(!body.Data.CreateInvalidation);
 
 		let obj = await new AWS.S3().getObject({Bucket: 'parima', Key: 'v1/index.html'}).promise();
 		assert.ok(obj.Body.toString().includes("Parima Placeholder Website"));
 		assert.ok(obj.Body.toString().includes("aws s3 sync . s3://parima/v1"));
 	});
 
-	it('static site no git update', async() => {
+	it('static site no git update Managed-CachingDisabled', async() => {
 		process.env.STACK_NAME = "parima";
 
 		let text = await readFile('./test/json/deployment/static_no_git_update.json');
@@ -61,6 +64,27 @@ describe('Deployment', async()  => {
 		assert.equal(200, response[1]);
 		assert.equal("SUCCESS", body.Status);
 		assert.equal("v2", body.Data.WebsiteVersion);
+		assert.ok(!body.Data.CreateInvalidation);
+
+		try {
+ 			await new AWS.S3().headObject({Bucket: 'parima', Key: 'v2/index.html'}).promise();
+ 			assert.ok(false);
+ 		} catch(err) {
+ 			assert.equal("NotFound: null", err);
+ 		}
+	});
+
+	it('static site no git update Managed-CachingOptimized', async() => {
+		process.env.STACK_NAME = "parima-cache";
+
+		let text = await readFile('./test/json/deployment/static_no_git_update.json');
+		let response = await lambda.handler(JSON.parse(text), {logStreamName:"test"});
+		let body = JSON.parse(JSON.parse(response[0]).body);
+
+		assert.equal(200, response[1]);
+		assert.equal("SUCCESS", body.Status);
+		assert.equal("v2", body.Data.WebsiteVersion);
+		assert.ok(body.Data.CreateInvalidation);
 
 		try {
  			await new AWS.S3().headObject({Bucket: 'parima', Key: 'v2/index.html'}).promise();
@@ -85,6 +109,10 @@ describe('Deployment', async()  => {
 		let response = await lambda.handler(JSON.parse(text), {logStreamName:"test"});
 		assert.equal(200, response[1]);
 
+		let body = JSON.parse(JSON.parse(response[0]).body);
+		assert.equal("SUCCESS", body.Status);
+		assert.ok(!body.Data.CreateInvalidation);
+
 		let obj = await new AWS.S3().getObject({Bucket: 'parima', Key: 'f965eb19c/parima.yml'}).promise();
 		assert.ok(obj.Body.toString().includes("Launch Your Website using AWS in Minutes"));
 	});
@@ -104,6 +132,10 @@ describe('Deployment', async()  => {
 		let response = await lambda.handler(JSON.parse(text), {logStreamName:"test"});
 		assert.equal(200, response[1]);
 
+		let body = JSON.parse(JSON.parse(response[0]).body);
+		assert.equal("SUCCESS", body.Status);
+		assert.ok(!body.Data.CreateInvalidation);
+
 		let obj = await new AWS.S3().getObject({Bucket: 'parima', Key: 'v1/index.html'}).promise();
 		assert.ok(obj.Body.toString().includes("Parima Placeholder Website"));
 		assert.ok(obj.Body.toString().includes("Git Repository is Private"));
@@ -117,7 +149,13 @@ describe('Deployment', async()  => {
 		let response = await lambda.handler(JSON.parse(text), {logStreamName:"test"});
 		assert.equal(200, response[1]);
 
-		let obj = await new AWS.S3().getObject({Bucket: 'parima', Key: '344974445/index.html'}).promise();
+		let body = JSON.parse(JSON.parse(response[0]).body);
+		assert.equal("SUCCESS", body.Status);
+		assert.ok(!body.Data.CreateInvalidation);
+
+		var command = "git --git-dir /tmp/git/.git log --format=\"%H\" -n 1";
+		var version = execSync(command).toString().substring(0,9);
+		let obj = await new AWS.S3().getObject({Bucket: 'parima', Key: version + '/index.html'}).promise();
 		assert.ok(obj.Body.toString().includes("FormKiQ Blog"));
 	});
 
@@ -171,23 +209,37 @@ describe('Deployment', async()  => {
 		assert.equal("*", response.headers['Access-Control-Allow-Origin']);
 	});
 
-	it('github main branch update event', async() => {
+	it('github main branch update event Managed-CachingDisabled', async() => {
 		process.env.STACK_NAME = "parima-git";
 
 		let text = await readFile('./test/json/deployment/github_main_branch_event.json');
 		let response = await lambda.handler(JSON.parse(text), {logStreamName:"test"});
 		assert.equal(200, response.statusCode);
-		assert.equal("d2ee71e3f", JSON.parse(response.body).WebsiteVersion);
+
+		let body = JSON.parse(response.body);
+		assert.equal("d2ee71e3f", body.WebsiteVersion);
+		assert.ok(!body.CreateInvalidation);
 	});
 
-	it('github main branch update event', async() => {
+	it('github main branch update event Managed-CachingOptimized', async() => {
+		process.env.STACK_NAME = "parima-cache-git";
+
+		let text = await readFile('./test/json/deployment/github_main_branch_event.json');
+		let response = await lambda.handler(JSON.parse(text), {logStreamName:"test"});
+		assert.equal(200, response.statusCode);
+
+		let body = JSON.parse(response.body);
+		assert.equal("d2ee71e3f", body.WebsiteVersion);
+		assert.ok(body.CreateInvalidation);
+	});
+
+	it('github dev branch update event', async() => {
 		process.env.STACK_NAME = "parima-git";
 
 		let text = await readFile('./test/json/deployment/github_dev_branch_event.json');
 		let response = await lambda.handler(JSON.parse(text), {logStreamName:"test"});
-		console.log(response);
 		assert.equal(200, response.statusCode);
-		assert.equal("{}", response.body);
+		assert.equal("{\"WebsiteVersion\":\"v1\",\"CreateInvalidation\":false}", response.body);
 	});
 });
 

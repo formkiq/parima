@@ -25,5 +25,8 @@ aws s3 cp /Users/slycer/Documents/workspace/java/parima/src/lambda/layer_git/lay
 aws route53 create-hosted-zone --caller-reference ABCDEF --name tryformkiq.com --endpoint-url http://localhost:4566 --region us-east-1
 
 aws cloudformation deploy --template-file parima.yml --stack-name parima --endpoint-url http://localhost:4566 --region us-east-1
+aws cloudformation deploy --template-file parima.yml --stack-name parima-cache --endpoint-url http://localhost:4566 --region us-east-1 --parameter-overrides Caching=Managed-CachingOptimized
 aws cloudformation deploy --template-file parima.yml --stack-name parima-git --endpoint-url http://localhost:4566 --region us-east-1 --parameter-overrides GitRepositoryUrl=https://github.com/formkiq/parima-test-private-repo.git
+aws cloudformation deploy --template-file parima.yml --stack-name parima-cache-git --endpoint-url http://localhost:4566 --region us-east-1 --parameter-overrides GitRepositoryUrl=https://github.com/formkiq/parima-test-private-repo.git Caching=Managed-CachingOptimized
+aws cloudformation deploy --template-file parima.yml --stack-name parima-certificate --endpoint-url http://localhost:4566 --region us-east-1 --parameter-overrides DomainName=test.tryformkiq.com
 

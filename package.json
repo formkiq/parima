@@ -4,7 +4,7 @@
   "description": "Parima - Launch Your Website using AWS in Minutes (https://github.com/formkiq/parima)",
   "scripts": {
     "build": "gulp",
-    "test": "nyc --reporter=html --reporter=text mocha --timeout 10000 'test/*.js' --recursive --reporter list"
+    "test": "nyc --reporter=html --reporter=text mocha --timeout 60000 'test/*.js' --recursive --reporter list"
   },
   "repository": {
     "type": "git",
@@ -23,6 +23,7 @@
     "gulp-token-replace": "^1.1.5",
     "gulp-uglify-es": "^2.0.0",
     "gulp-zip": "^5.0.2",
+    "hash-files": "^1.1.1",
     "mocha": "^8.1.3",
     "mockserver": "^3.1.1",
     "nyc": "^15.1.0"

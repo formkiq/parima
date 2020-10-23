@@ -335,6 +335,9 @@ Resources:
       Timeout: '300'
       Handler: index.handler
       Role: !GetAtt CertificateLambdaRole.Arn
+      Environment:
+        Variables:
+          HASH: {{certificate_hash}}
       Tags:
         - Key: "Application"
           Value: "Parima"
@@ -372,6 +375,7 @@ Resources:
       Environment:
         Variables:
           STACK_NAME: !Ref 'AWS::StackName'
+          HASH: {{deployment_hash}}
       Events:
         WebhookGet:
           Type: HttpApi
