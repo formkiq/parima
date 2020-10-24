@@ -3,6 +3,7 @@
   "version": "1.2.0",
   "description": "Parima - Launch Your Website using AWS in Minutes (https://github.com/formkiq/parima)",
   "scripts": {
+    "preinstall": "npx npm-force-resolutions",
     "build": "gulp",
     "test": "nyc --reporter=html --reporter=text mocha --timeout 60000 'test/*.js' --recursive --reporter list"
   },
@@ -28,5 +29,8 @@
     "mockserver": "^3.1.1",
     "nyc": "^15.1.0"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "resolutions": {
+    "yargs-parser": "^20.2.3"
+  }
 }
