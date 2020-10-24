@@ -1,25 +1,114 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Parima v1.1.1 - Launch Your Website using AWS in Minutes (https://github.com/formkiq/parima)
+Transform: AWS::Serverless-2016-10-31
+Description: Parima v1.2 - Launch Your Website using AWS in Minutes (https://github.com/formkiq/parima)
 
 Parameters:
 
-  HostedZone:
-    Type: String
-    Description: Optional. Required for custom domains - see https://console.aws.amazon.com/route53/v2/HostedZones
-    Default: ''
+  # NotificationEmail:
+  #   Type: String
+  #   Description: Optional. Email address that is sent website update notifications
+  #   Default: ""
   DomainName:
     Type: String
     Description: Optional. Required for custom domain, e.g. www.yourcompany.com
-    Default: ''
+    Default: ""
   WebsiteVersion:
     Type: String
-    Description: Version website to deploy
+    Description: Optional. Website version (ignored if using Git)
     AllowedPattern: ".+"
     Default: "v1"
+  GitDeploymentPath:
+    Type: String
+    Description: Optional. The path of the Git Repository to deploy, e.g. "public" or "dist"
+    Default: ""    
+  GitRepositoryUrl:
+    Type: String
+    Description: Optional. Git Repository Url, e.g. https://github.com/YOUR-USERNAME/YOUR-REPOSITORY.git
+    Default: ""
+  GitBranch:
+    Type: String
+    Description: Optional. Git Deployment Branch - defaults to 'master'
+    Default: ""    
+  DeploymentType:
+    Type: String
+    Description: Optional. Deployment methology to use
+    Default: "static"
+    AllowedValues: 
+      - "static"
+      - "Hugo0.76.3"
+  Caching:
+    Description: Required. Caching Stategy used (see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-cache-policies.html)
+    Default: "Managed-CachingDisabled"
+    Type: String
+    AllowedValues:
+      - "Managed-CachingDisabled"
+      - "Managed-CachingOptimized"
+      - "Managed-CachingOptimizedForUncompressedObjects"
+
+Mappings:
+  CacheMap:
+    Managed-CachingDisabled:
+      ID: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+    Managed-CachingOptimized:
+      ID: 658327ea-f89d-4fab-a63d-7e88639e58f6
+    Managed-CachingOptimizedForUncompressedObjects:
+      ID: b2884449-e4de-46a7-ac36-70bc7f1ddd6d
+  RegionMap: 
+    us-east-1:
+      BUCKET: formkiq-distribution-us-east-1-core
+    us-east-2:
+      BUCKET: formkiq-distribution-us-east-2-core     
+    us-west-1:
+      BUCKET: formkiq-distribution-us-west-1-core
+    us-west-2:
+      BUCKET: formkiq-distribution-us-west-2-core
+    ca-central-1:
+      BUCKET: formkiq-distribution-ca-central-1-core
+    af-south-1:
+      BUCKET: formkiq-distribution-af-south-1-core
+    ap-east-1:
+      BUCKET: formkiq-distribution-ap-east-1-core
+    ap-south-1:
+      BUCKET: formkiq-distribution-ap-south-1-core
+    ap-northeast-3:
+      BUCKET: formkiq-distribution-ap-northeast-3-core
+    ap-northeast-2:
+      BUCKET: formkiq-distribution-ap-northeast-2-core
+    ap-southeast-1:
+      BUCKET: formkiq-distribution-ap-southeast-1-core
+    ap-southeast-2:
+      BUCKET: formkiq-distribution-ap-southeast-2-core
+    ap-northeast-1:
+      BUCKET: formkiq-distribution-ap-northeast-1-core
+    eu-central-1:
+      BUCKET: formkiq-distribution-eu-central-1-core
+    eu-west-1:
+      BUCKET: formkiq-distribution-eu-west-1-core
+    eu-west-2:
+      BUCKET: formkiq-distribution-eu-west-2-core
+    eu-south-1:
+      BUCKET: formkiq-distribution-eu-south-1-core
+    eu-west-3:
+      BUCKET: formkiq-distribution-eu-west-3-core
+    eu-north-1:
+      BUCKET: formkiq-distribution-eu-north-1-core
+    me-south-1:
+      BUCKET: formkiq-distribution-me-south-1-core
+    sa-east-1:
+      BUCKET: formkiq-distribution-sa-east-1-core
+  DeploymentTypeMap:
+    "static":
+      IMAGE: parima/layers/layer-hugo-0.76.3.zip
+    "Hugo0.76.3": 
+      IMAGE: parima/layers/layer-hugo-0.76.3.zip
 
 Conditions:
-  HasCertificate: !And [!Not [ !Equals [ !Ref HostedZone, "" ]], !Not [ !Equals [ !Ref DomainName, "" ]]]
-  NoCertificate: !Or [!Equals [ !Ref HostedZone, "" ], !Equals [ !Ref DomainName, "" ]]
+  HasCertificate: !Not [ !Equals [ !Ref DomainName, "" ]]
+  # HasEmail: !Not [ !Equals [ !Ref NotificationEmail, "" ]]
+  NoCertificate: !Equals [ !Ref DomainName, "" ]
+  StaticDeployment: !Equals [ !Ref DeploymentType, "static" ]
+  HasGitRepository: !Not [ !Equals [ !Ref GitRepositoryUrl, "" ]]
+  NoGitRepository: !Equals [ !Ref GitRepositoryUrl, "" ]
 
 Resources:
 
@@ -60,19 +149,19 @@ Resources:
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
     Condition: NoCertificate
+    DependsOn:
+    - DeploymentLambdaResource
     Properties:
       DistributionConfig:
         Origins:
         - DomainName: !GetAtt S3Bucket.RegionalDomainName
           Id: s3origin
-          OriginPath: !Sub "/${WebsiteVersion}"
+          OriginPath: !Join ['', ['/', !GetAtt DeploymentLambdaResource.WebsiteVersion]]
           S3OriginConfig:
             OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}'
         DefaultCacheBehavior:
           Compress: true
-          DefaultTTL: 600
-          MaxTTL: 600
-          MinTTL: 0
+          CachePolicyId: !FindInMap [CacheMap, !Ref Caching, ID]
           ForwardedValues:
             QueryString: false
           TargetOriginId: s3origin
@@ -92,7 +181,7 @@ Resources:
     Condition: HasCertificate
     Properties:
       Name: !Ref DomainName
-      HostedZoneName: !Sub "${HostedZone}."
+      HostedZoneName: !Join ['', [!GetAtt Certificate.HostedZone, '.']]
       Type: A
       AliasTarget:
         HostedZoneId: Z2FDTNDATAQYW2
@@ -101,6 +190,7 @@ Resources:
   CloudFrontCertificateDistribution:
     Type: AWS::CloudFront::Distribution
     DependsOn:
+    - DeploymentLambdaResource
     - Certificate
     Condition: HasCertificate
     Properties:
@@ -108,14 +198,12 @@ Resources:
         Origins:
         - DomainName: !GetAtt S3Bucket.RegionalDomainName
           Id: s3origin
-          OriginPath: !Sub "/${WebsiteVersion}"
+          OriginPath: !Join ['', ['/', !GetAtt DeploymentLambdaResource.WebsiteVersion]]
           S3OriginConfig:
             OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}'
         DefaultCacheBehavior:
           Compress: true
-          DefaultTTL: 600
-          MaxTTL: 600
-          MinTTL: 0
+          CachePolicyId: !FindInMap [CacheMap, !Ref Caching, ID]
           ForwardedValues:
             QueryString: false
           TargetOriginId: s3origin
@@ -142,6 +230,10 @@ Resources:
   # Create an IAM user with Access Keys to enable automated deployment of the website to this bucket
   PublishUser:
     Type: 'AWS::IAM::User'
+    Properties:
+      Tags:
+      - Key: "Application"
+        Value: "Parima"
 
   PublishGroup:
     Type: AWS::IAM::Group
@@ -177,12 +269,137 @@ Resources:
     Properties:
       UserName: !Ref PublishUser
 
-  DefaultSiteResource:
-    Type: Custom::DefaultSite
+  DeploymentLambdaResource:
+    Type: Custom::DeploymentLambda
     Properties:
-      ServiceToken: !GetAtt DefaultSiteLambda.Arn
+      WebsiteVersion: !Ref WebsiteVersion
+      ServiceToken: !GetAtt DeploymentLambda.Arn
+      StackName: !Ref 'AWS::StackName'
+      GitRepositoryUrl: !Ref GitRepositoryUrl
+      GitBranch: !Ref GitBranch
+      DeploymentType: !Ref DeploymentType
+      S3Bucket: !Ref S3Bucket
+      SyncCommand: !Sub "aws s3 sync . s3://${S3Bucket}/${WebsiteVersion}"
+      GithubOAuthUrl: !Sub 'https://oauth.formkiq.com/authorize?redirect_uri=${WebhookApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/webhook'
+      WebHookUrl: !Sub 'https://${WebhookApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/webhook'
+      GitDeploymentPath: !Ref GitDeploymentPath
 
-  DefaultSiteLambdaRole:
+  Certificate:
+    Type: Custom::Certificate
+    Condition: HasCertificate
+    Properties:
+      ServiceToken: !GetAtt CertificateLambda.Arn
+      Region: us-east-1
+      OutputParameter: Certificate
+      DomainName: !Ref DomainName
+      StackName: !Ref 'AWS::StackName'
+
+  CertificateLambdaRole:
+    Type: AWS::IAM::Role
+    Condition: HasCertificate
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - acm:DeleteCertificate
+            - acm:RequestCertificate
+            - acm:AddTagsToCertificate
+            - acm:DescribeCertificate    
+            - cloudformation:DescribeStacks
+            - route53:ChangeResourceRecordSets
+            - route53:ListHostedZonesByName
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+
+  CertificateLambda:
+    Type: AWS::Lambda::Function
+    Condition: HasCertificate
+    Properties:
+      Runtime: nodejs12.x
+      Timeout: '300'
+      Handler: index.handler
+      Role: !GetAtt CertificateLambdaRole.Arn
+      Environment:
+        Variables:
+          HASH: 623637564c69f237b7672f6f0e4e77cbb280279d
+      Tags:
+        - Key: "Application"
+          Value: "Parima"
+      Code:
+        S3Bucket: !FindInMap [RegionMap, !Ref "AWS::Region", BUCKET]
+        S3Key: "parima/v1.2/certificate.zip"
+
+  LayerDeployment:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: Lambda Layer containing Deployment build binary
+      ContentUri: 
+        Bucket: !FindInMap [RegionMap, !Ref "AWS::Region", BUCKET]
+        Key: !FindInMap [DeploymentTypeMap, !Ref DeploymentType, IMAGE]
+
+  LayerGit:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: Lambda Layer containing Git binary
+      ContentUri: 
+        Bucket: !FindInMap [RegionMap, !Ref "AWS::Region", BUCKET]
+        Key: "parima/layers/layer-git-2.28.0.zip"
+
+  DeploymentLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: nodejs12.x
+      Timeout: 900
+      MemorySize: 512
+      Handler: index.handler
+      Role: !GetAtt DeploymentLambdaRole.Arn
+      Layers: !If [StaticDeployment, [!Ref LayerGit], [!Ref LayerDeployment, !Ref LayerGit]]
+      Tags:
+        Application: "Parima"
+      Environment:
+        Variables:
+          STACK_NAME: !Ref 'AWS::StackName'
+          HASH: 31a03f6623d124ca39835b579b92a40239e19bf3
+      Events:
+        WebhookGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WebhookApi
+            Path: /webhook
+            Method: get        
+        WebhookPost:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WebhookApi
+            Path: /webhook
+            Method: post
+      CodeUri:
+        Bucket: !FindInMap [RegionMap, !Ref "AWS::Region", BUCKET]
+        Key: "parima/v1.2/deployment.zip"
+  
+  WebhookApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Tags:
+        Application: "Parima"
+
+  DeploymentLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -212,78 +429,73 @@ Resources:
             - logs:CreateLogGroup
             - logs:CreateLogStream
             - logs:PutLogEvents
+            - cloudformation:DescribeStacks
+            - cloudformation:UpdateStack
+            - iam:GetRole
+            - lambda:UpdateFunctionConfiguration
+            - lambda:GetFunctionConfiguration
+            - lambda:InvokeFunction
+            - iam:PassRole
+            - cloudfront:GetDistribution
+            - cloudfront:UpdateDistribution
+            - cloudfront:CreateInvalidation
             Resource: '*'
-
-  DefaultSiteLambda:
-    Type: AWS::Lambda::Function
-    Properties:
-      Runtime: nodejs12.x
-      Timeout: '300'
-      Handler: index.handler
-      Role: !GetAtt DefaultSiteLambdaRole.Arn
-      Environment:
-        Variables:
-          S3_BUCKET: !Ref S3Bucket
-          WEBSITE_VERSION: !Ref WebsiteVersion
-      Code:
-        ZipFile: |
-          const AWS=require("aws-sdk"),https=require("https"),fs=require("fs");var s3=new AWS.S3({apiVersion:"2006-03-01"});async function upload(e){const t=e.split("/").pop();return new Promise((e,s)=>{console.log("Uploading "+t+" to "+process.env.S3_BUCKET);let o=getContentTypeByFile(t),n={Bucket:process.env.S3_BUCKET,Key:process.env.WEBSITE_VERSION+"/"+t,Body:fs.createReadStream("/tmp/"+t),ContentType:o};s3.putObject(n,function(s,o){s?(console.log(s),e(s)):e(t)})})}async function download(e){const t=e.split("/").pop(),s=fs.createWriteStream("/tmp/"+t);return new Promise((t,o)=>{https.get(e,e=>{200===e.statusCode?e.pipe(s):(s.close(),t(`Server responded with ${e.statusCode}: ${e.statusMessage}`))}).on("error",e=>{s.close(),t(e.message)}),s.on("finish",()=>{console.log("downloaded "+e),t("downloaded "+e)})})}async function sendResponse(e,t,s,o){var n=require("https"),r=require("url"),a=JSON.stringify({Status:s,Reason:"See the details in CloudWatch Log Stream: "+t.logStreamName,PhysicalResourceId:e.StackId+"-"+e.LogicalResourceId,StackId:e.StackId,RequestId:e.RequestId,LogicalResourceId:e.LogicalResourceId,Data:o}),i=r.parse(e.ResponseURL),p={hostname:i.hostname,port:443,path:i.path,method:"PUT",headers:{"content-type":"","content-length":a.length}};return new Promise(function(e,t){var s=n.request(p,t=>{t.setEncoding("utf8");let s="";t.on("data",e=>{s+=e}),t.on("end",()=>{e([s,t.statusCode,t.headers])})}).on("error",t=>{JSON.stringify(t);e([{message:"Unable to send message"},502,null])}).on("timeout",()=>{e([{message:"Request has timed out"},502,null])});s.write(a),s.end()})}function getContentTypeByFile(e){var t="application/octet-stream",s=e.toLowerCase();return s.indexOf(".html")>=0?t="text/html":s.indexOf(".css")>=0?t="text/css":s.indexOf(".json")>=0?t="application/json":s.indexOf(".js")>=0?t="application/x-javascript":s.indexOf(".png")>=0?t="image/png":s.indexOf(".jpg")>=0&&(t="image/jpg"),t}module.exports.handler=(async(e,t)=>{var s=[];const o=["https://raw.githubusercontent.com/formkiq/parima/master/placeholder/index.html","https://raw.githubusercontent.com/formkiq/parima/master/placeholder/parima.png","https://raw.githubusercontent.com/formkiq/parima/master/placeholder/favicon.ico"];if(null!=e.RequestType){if("Create"===e.RequestType){for(let e of o)s.push(download(e));return Promise.all(s).then(()=>{var e=[];for(let t of o)e.push(upload(t));return Promise.all(e)}).then(()=>sendResponse(e,t,"SUCCESS",{})).catch(s=>(console.log("error "+s),sendResponse(e,t,"FAILED")))}return sendResponse(e,t,"SUCCESS",{})}});
-
-  Certificate:
-    Type: Custom::Certificate
-    Condition: HasCertificate
-    Properties:
-      ServiceToken: !GetAtt CertificateLambda.Arn
-      Region: us-east-1
-      OutputParameter: Certificate
-      DomainName: !Ref DomainName
-      HostedZoneName: !Ref HostedZone
-      StackName: !Ref 'AWS::StackName'
-
-  CertificateLambdaRole:
-    Type: AWS::IAM::Role
-    Condition: HasCertificate
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-        - Effect: Allow
-          Principal:
-            Service:
-              - lambda.amazonaws.com
-          Action:
-            - sts:AssumeRole
-      Path: "/"
-      Policies:
-      - PolicyName: root
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
           - Effect: Allow
             Action:
-            - acm:DeleteCertificate
-            - acm:RequestCertificate
-            - acm:AddTagsToCertificate
-            - acm:DescribeCertificate    
-            - cloudformation:DescribeStacks        
-            - route53:ChangeResourceRecordSets
-            - route53:ListHostedZonesByName
-            - logs:CreateLogGroup
-            - logs:CreateLogStream
-            - logs:PutLogEvents
-            Resource: '*'
+            - ssm:GetParameter
+            - ssm:PutParameter
+            Resource:
+            - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/formkiq/parima/*"
 
-  CertificateLambda:
-    Type: AWS::Lambda::Function
-    Condition: HasCertificate
-    Properties:
-      Runtime: nodejs12.x
-      Timeout: '300'
-      Handler: index.handler
-      Role: !GetAtt CertificateLambdaRole.Arn
-      Code:
-        ZipFile: |
-          const AWS=require("aws-sdk");var acm=new AWS.ACM,route53=new AWS.Route53,cloudformation=new AWS.CloudFormation;const wait=e=>new Promise(t=>setTimeout(t,e));async function findHostedZoneId(e){return new Promise((t,r)=>{var a={DNSName:e};route53.listHostedZonesByName(a,function(e,a){e?r(e):t(a.HostedZones[0].Id)})})}async function updateRoute53Retry(e,t,r=10,a=1e4){let i=await findHostedZoneId(e);console.log("using hosted zone "+i);try{let o=await describeCertificate(t);return await updateRoute53(i,o),t}catch(i){return await wait(a),0===r?Promise.reject("Maximum retries exceeded!"):updateRoute53Retry(e,t,--r,a)}}async function updateRoute53(e,t){var r=[];for(let i of t.Certificate.DomainValidationOptions)if(i.ResourceRecord&&i.ResourceRecord.Name){var a={ChangeBatch:{Changes:[{Action:"UPSERT",ResourceRecordSet:{Name:i.ResourceRecord.Name,ResourceRecords:[{Value:i.ResourceRecord.Value}],TTL:60,Type:i.ResourceRecord.Type}}]},HostedZoneId:e};r.push(route53.changeResourceRecordSets(a).promise())}return Promise.all(r)}async function waitForValidation(e){return acm.waitFor("certificateValidated",{CertificateArn:e}).promise()}async function findCertificateArn(e,t){var r={StackName:e};return new Promise((e,a)=>{cloudformation.describeStacks(r,function(r,i){if(r)a(r);else{var o="";for(let e of i.Stacks[0].Outputs)e.OutputKey==t&&(o=e.OutputValue);""!=o?e(o):a(o)}})})}async function deleteCertificateRetry(e,t=30,r=1e4){try{return await deleteCertificate(e)}catch(a){return await wait(r),0===t?Promise.reject("Maximum retries exceeded!"):deleteCertificateRetry(e,--t,r)}}async function deleteCertificate(e){return console.log("deleting certificate "+e),acm.deleteCertificate({CertificateArn:e}).promise()}async function describeCertificate(e){return acm.describeCertificate({CertificateArn:e}).promise()}async function createCertificate(e,t){var r={DomainName:t,DomainValidationOptions:[{DomainName:t,ValidationDomain:e}],SubjectAlternativeNames:["*."+t],Tags:[{Key:"Application",Value:"Parima"}],ValidationMethod:"DNS"};return acm.requestCertificate(r).promise()}async function sendResponse(e,t,r,a){var i=require("https"),o=require("url"),n=JSON.stringify({Status:r,Reason:"See the details in CloudWatch Log Stream: "+t.logStreamName,PhysicalResourceId:e.StackId+"-"+e.LogicalResourceId,StackId:e.StackId,RequestId:e.RequestId,LogicalResourceId:e.LogicalResourceId,Data:a}),s=o.parse(e.ResponseURL),c={hostname:s.hostname,port:443,path:s.path,method:"PUT",headers:{"content-type":"","content-length":n.length}};return new Promise(function(e,t){var r=i.request(c,t=>{t.setEncoding("utf8");let r="";t.on("data",e=>{r+=e}),t.on("end",()=>{e([r,t.statusCode,t.headers])})}).on("error",t=>{JSON.stringify(t);e([{message:"Unable to send message"},502,null])}).on("timeout",()=>{e([{message:"Request has timed out"},502,null])});r.write(n),r.end()})}module.exports.handler=(async(e,t)=>{if(console.log(JSON.stringify(e)),null!=e.RequestType){let r=e.ResourceProperties.Region;if(null!=r&&(acm=new AWS.ACM({region:r}),console.log("using region: "+r)),"Create"===e.RequestType){let r=e.ResourceProperties.DomainName,a=e.ResourceProperties.HostedZoneName;return createCertificate(a,r).then(e=>(console.log("adding certificate verification DNS entries"),updateRoute53Retry(a,e.CertificateArn))).then(e=>(console.log("waiting DNS to be updated so certificate can be validated"),waitForValidation(e))).then(r=>(console.log("certificate has been validated"),sendResponse(e,t,"SUCCESS",{CertificateArn:r.Certificate.CertificateArn}))).catch(r=>(console.log(r),sendResponse(e,t,"FAILED")))}if("Delete"===e.RequestType){return findCertificateArn(e.ResourceProperties.StackName,e.ResourceProperties.OutputParameter).then(e=>deleteCertificateRetry(e)).then(r=>sendResponse(e,t,"SUCCESS",{})).catch(r=>(console.log(r),sendResponse(e,t,"FAILED")))}if("Update"===e.RequestType){return findCertificateArn(e.ResourceProperties.StackName,e.ResourceProperties.OutputParameter).then(r=>sendResponse(e,t,"SUCCESS",{CertificateArn:r}))}return sendResponse(e,t,"FAILED")}});
+  # VerifyEmailIdentity:
+  #   Type: Custom::VerifyEmailIdentity
+  #   Condition: HasEmail
+  #   Properties:
+  #     ServiceToken: !GetAtt VerifyEmailIdentityLambda.Arn
+  #     Email: !Ref NotificationEmail
+
+  # VerifyEmailIdentityLambda:
+  #   Type: AWS::Lambda::Function
+  #   Condition: HasEmail
+  #   Properties:
+  #     Runtime: nodejs12.x
+  #     Timeout: '300'
+  #     Handler: index.handler
+  #     Role: !GetAtt VerifyEmailIdentityLambdaRole.Arn
+  #     Tags:
+  #       - Key: "Application"
+  #         Value: "Parima"
+  #     Code:
+  #       ZipFile: |
+  #         var e=new(require("aws-sdk").SES);async function t(e,t,r,s){var n=require("https"),o=require("url"),a=JSON.stringify({Status:r,Reason:"See the details in CloudWatch Log Stream: "+t.logStreamName,PhysicalResourceId:e.StackId+"-"+e.LogicalResourceId,StackId:e.StackId,RequestId:e.RequestId,LogicalResourceId:e.LogicalResourceId,Data:s}),l=o.parse(e.ResponseURL),i={hostname:l.hostname,port:443,path:l.path,method:"PUT",headers:{"content-type":"","content-length":a.length}};return new Promise((function(e,t){var r=n.request(i,t=>{t.setEncoding("utf8");let r="";t.on("data",e=>{r+=e}),t.on("end",()=>{e([r,t.statusCode,t.headers])})}).on("error",t=>{JSON.stringify(t);e([{message:"Unable to send message"},502,null])}).on("timeout",()=>{e([{message:"Request has timed out"},502,null])});r.write(a),r.end()}))}module.exports.handler=async(r,s)=>{console.log(JSON.stringify(r));var n=null,o=null,a=r.RequestType;return null!=r.ResourceProperties&&(n=r.ResourceProperties.Email),null!=r.OldResourceProperties&&(o=r.OldResourceProperties.Email),"Delete"===a&&(o=r.ResourceProperties.Email,n=null),async function(t){return null!=t?e.deleteIdentity({Identity:t}).promise():Promise.resolve("")}(o).then(t=>async function(t){return null!=t?e.verifyEmailIdentity({EmailAddress:t}).promise():Promise.resolve("")}(n)).then(()=>t(r,s,"SUCCESS",{})).catch(e=>(console.log(e),t(r,s,"FAILED")))};
+
+  # VerifyEmailIdentityLambdaRole:
+  #   Type: AWS::IAM::Role
+  #   Condition: HasEmail
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #       - Effect: Allow
+  #         Principal:
+  #           Service:
+  #             - lambda.amazonaws.com
+  #         Action:
+  #           - sts:AssumeRole
+  #     Path: "/"
+  #     Policies:
+  #     - PolicyName: root
+  #       PolicyDocument:
+  #         Version: '2012-10-17'
+  #         Statement:
+  #         - Effect: Allow
+  #           Action:
+  #           - logs:CreateLogGroup
+  #           - logs:CreateLogStream
+  #           - logs:PutLogEvents              
+  #           - ses:DeleteIdentity
+  #           - ses:VerifyEmailIdentity
+  #           Resource: '*'
 
 Outputs:
   Certificate:
@@ -303,5 +515,23 @@ Outputs:
     Description: 'S3 Bucket'
     Value: !Ref S3Bucket
   SyncCommand:
-    Description: 'Sync Current Directory to S3'
-    Value: !Sub "aws s3 sync . s3://${S3Bucket}/${WebsiteVersion}"    
+    Condition: NoGitRepository
+    Description: 'Deploy local directory to Website'
+    Value: !Sub "aws s3 sync . s3://${S3Bucket}/${WebsiteVersion}"
+  InvalidateCache:
+    Description: 'Invalidate Website Cache'
+    Value: !If [HasCertificate, !Sub "aws cloudfront create-invalidation --distribution-id ${CloudFrontCertificateDistribution} --paths \"/*\"", !Sub "aws cloudfront create-invalidation --distribution-id ${CloudFrontDistribution} --paths \"/*\""]
+  WebHookUrl:
+    Condition: HasGitRepository
+    Description: 'Git Deployment Web Hook'
+    Value: !Sub 'https://${WebhookApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/webhook'
+  GithubOAuthUrl:
+    Condition: HasGitRepository
+    Description: 'Give Parima access to private Git Repository'
+    Value: !Sub 'https://oauth.formkiq.com/authorize?redirect_uri=${WebhookApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/webhook'
+  DeploymentType:
+    Description: Deployment methology to use
+    Value: !Ref DeploymentType
+  CloudFrontDistributionId:
+    Description: 'CloudFront Distribution Id'
+    Value: !If [HasCertificate, !Ref CloudFrontCertificateDistribution, !Ref CloudFrontDistribution]

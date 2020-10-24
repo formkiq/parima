@@ -1,0 +1,23 @@
+{
+    "RequestType": "Delete",
+    "ServiceToken": "arn:aws:lambda:us-east-2:11111111111111:function:parima-DeploymentLambda-1J8XX4NUS6UPK",
+    "ResponseURL": "http://localhost:9001/responseURL",
+    "StackId": "arn:aws:cloudformation:us-east-2:11111111111111:stack/parima/4c061080-116f-11eb-8a5a-0a3e4885fce2",
+    "RequestId": "72e38bde-b60f-49c6-812f-c0d622b8b3e0",
+    "LogicalResourceId": "DeploymentLambdaResource",
+    "PhysicalResourceId": "arn:aws:cloudformation:us-east-2:11111111111111:stack/parima/4c061080-116f-11eb-8a5a-0a3e4885fce2-DeploymentLambdaResource",
+    "ResourceType": "Custom::DeploymentLambda",
+    "ResourceProperties": {
+        "ServiceToken": "arn:aws:lambda:us-east-2:11111111111111:function:parima-DeploymentLambda-1J8XX4NUS6UPK",
+        "GitDeploymentPath": "",
+        "S3Bucket": "parima-s3bucket-31ld4rfd556e",
+        "SyncCommand": "aws s3 sync . s3://parima-s3bucket-31ld4rfd556e/e2b209159",
+        "GitRepositoryUrl": "https://github.com/formkiq/blog.formkiq.com.git",
+        "WebsiteVersion": "e2b209159",
+        "WebHookUrl": "https://XXXXXXXXXXXXXX.execute-api.us-east-2.amazonaws.com/webhook",
+        "GitBranch": "migrate-blog",
+        "DeploymentType": "Hugo0.76.3",
+        "GithubOAuthUrl": "https://oauth.formkiq.com/authorize?redirect_uri=XXXXXXXXXXXXXX.execute-api.us-east-2.amazonaws.com/webhook",
+        "StackName": "parima-certificate"
+    }
+}
