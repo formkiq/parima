@@ -100,6 +100,9 @@ describe('Deployment', async()  => {
 		let text = await readFile('./test/json/deployment/static_no_git_delete.json');
 		let response = await lambda.handler(JSON.parse(text), {logStreamName:"test"});
 		assert.equal(200, response[1]);
+		let body = JSON.parse(JSON.parse(response[0]).body);
+		assert.equal("SUCCESS", body.Status);
+		assert.ok(!body.Data.CreateInvalidation);
 	});
 
 	it('static site public git create', async() => {
@@ -123,6 +126,9 @@ describe('Deployment', async()  => {
 		let text = await readFile('./test/json/deployment/static_public_git_delete.json');
 		let response = await lambda.handler(JSON.parse(text), {logStreamName:"test"});
 		assert.equal(200, response[1]);
+		let body = JSON.parse(JSON.parse(response[0]).body);
+		assert.equal("SUCCESS", body.Status);
+		assert.ok(!body.Data.CreateInvalidation);
 	});
 
 	it('static site private git create', async() => {
@@ -165,6 +171,10 @@ describe('Deployment', async()  => {
 		let text = await readFile('./test/json/deployment/static_private_git_delete.json');
 		let response = await lambda.handler(JSON.parse(text), {logStreamName:"test"});
 		assert.equal(200, response[1]);
+
+		let body = JSON.parse(JSON.parse(response[0]).body);
+		assert.equal("SUCCESS", body.Status);
+		assert.ok(!body.Data.CreateInvalidation);
 	});
 
 	it('access token to private git repo', async() => {
@@ -230,7 +240,7 @@ describe('Deployment', async()  => {
 
 		let body = JSON.parse(response.body);
 		assert.equal("d2ee71e3f", body.WebsiteVersion);
-		assert.ok(body.CreateInvalidation);
+		assert.ok(!body.CreateInvalidation);
 	});
 
 	it('github dev branch update event', async() => {

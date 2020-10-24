@@ -98,7 +98,7 @@ function buildConfig(event) {
         obj.body = null;
       }
 
-      console.log(JSON.stringify(obj));
+      log(JSON.stringify(obj));
       return Promise.resolve(obj);
     });
 }
@@ -236,10 +236,11 @@ async function updateCloudFormation(config) {
       }
     }
 
-    console.log("updating website from " + oldWebsiteVersion + " to " + config.WebsiteVersion);
+    log("updating website from " + oldWebsiteVersion + " to " + config.WebsiteVersion);
     return cf.updateStack(params).promise().then(()=>{
       return Promise.resolve(config);
     }).catch(error => { 
+      log(error);
       return Promise.resolve(config);
     });
     
@@ -249,7 +250,7 @@ async function updateCloudFormation(config) {
 }
 
 async function createInvalidation(config) {
-  if (config.RequestType != "Create" && config.HasWebsiteVersionChanged && config.Caching != "Managed-CachingDisabled") {
+  if (config.RequestType == "Update" && config.HasWebsiteVersionChanged && config.Caching != "Managed-CachingDisabled") {
     var params = {
       DistributionId: config.CloudFrontDistributionId,
       InvalidationBatch: {
@@ -260,9 +261,11 @@ async function createInvalidation(config) {
 
     config.CreateInvalidation = true;
 
+    log("invalidating cloudfront cache");
     return cloudfront.createInvalidation(params).promise().then(()=> {
       return Promise.resolve(config);
     }).catch(error => { 
+      log(error);
       return Promise.resolve(config);
     });
 
@@ -378,7 +381,7 @@ async function clone(config) {
 
 async function runClone(config, url) {
 
-  console.log("git clone --single-branch --branch " + config.GitBranch);
+  log("git clone --single-branch --branch " + config.GitBranch);
   var command = "git clone --single-branch --branch " + config.GitBranch + " " + url + " " + config.TempDirectory + "/";
 
   if (!config.GitCloneSuccess) {
@@ -396,8 +399,8 @@ async function runClone(config, url) {
 
 async function buildHugo(config) {
     
-    if (config.GitCloneSuccess && config.DeploymentType != null && config.DeploymentType.length > 0 && config.DeploymentType.startsWith("Hugo")) {
-        console.log("building Hugo site");
+    if (config.RequestType != null && config.GitCloneSuccess && config.DeploymentType != null && config.DeploymentType.length > 0 && config.DeploymentType.startsWith("Hugo")) {
+        log("building Hugo site");
         var command = "hugo --source " + config.TempDirectory + " --debug";
         
         try {
@@ -405,7 +408,8 @@ async function buildHugo(config) {
           config.HugoBuildSuccess = true;
           config.GitDeploymentPath = "public";
         } catch(err) {
-           config.HugoBuildSuccess = false;
+          log(err);
+          config.HugoBuildSuccess = false;
         }
     }
     
@@ -414,7 +418,7 @@ async function buildHugo(config) {
 
 async function syncFiles(config) {
   
-  if (config.GitCloneSuccess) {
+  if (config.RequestType != null && config.GitCloneSuccess) {
     
     config.SyncDirectory = config.TempDirectory + "/" + config.GitDeploymentPath;
     let diff = config.SyncDirectory.replace(config.TempDirectory, "");

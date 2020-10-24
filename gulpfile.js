@@ -33,19 +33,19 @@ function buildCloudFormation(cb) {
 
   var deployment = fs.readFileSync("src/js/deployment.js", "utf8");
 	var verifyEmailIdentity = fs.readFileSync("build/verifyEmailIdentity.js", "utf8");
+  
+	var config = {
+  	"version":"v1.2",
+    "deployment_hash":hashFiles.sync({files:['./src/js/deployment.js']}),
+    "certificate_hash":hashFiles.sync({files:['./src/js/certificate.js']}),
+  	"verifyEmailIdentity":verifyEmailIdentity
+  }
 
-  	var config = {
-	  	"version":"v1.2",
-      "deployment_hash":hashFiles.sync({files:['./src/js/deployment.js']}),
-      "certificate_hash":hashFiles.sync({files:['./src/js/deployment.js']}),
-	  	"verifyEmailIdentity":verifyEmailIdentity
-	}
-	
-  	return gulp.src(['src/yml/*.yml'])
-    	.pipe(replace({global:config}))
-    	.pipe(gulp.dest('.'))
+	return gulp.src(['src/yml/*.yml'])
+  	.pipe(replace({global:config}))
+  	.pipe(gulp.dest('.'))
 
-  	cb();
+	cb();
 }
 
 exports.default = gulp.series(buildUglify, buildCloudFormation, buildDeploymentZip, buildCertificateZip)

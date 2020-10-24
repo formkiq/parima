@@ -337,7 +337,7 @@ Resources:
       Role: !GetAtt CertificateLambdaRole.Arn
       Environment:
         Variables:
-          HASH: 2442faf7d5fe7e08dc309c5e522f83a94d021a18
+          HASH: 623637564c69f237b7672f6f0e4e77cbb280279d
       Tags:
         - Key: "Application"
           Value: "Parima"
@@ -375,7 +375,7 @@ Resources:
       Environment:
         Variables:
           STACK_NAME: !Ref 'AWS::StackName'
-          HASH: 2442faf7d5fe7e08dc309c5e522f83a94d021a18
+          HASH: 31a03f6623d124ca39835b579b92a40239e19bf3
       Events:
         WebhookGet:
           Type: HttpApi
@@ -438,6 +438,7 @@ Resources:
             - iam:PassRole
             - cloudfront:GetDistribution
             - cloudfront:UpdateDistribution
+            - cloudfront:CreateInvalidation
             Resource: '*'
           - Effect: Allow
             Action:
