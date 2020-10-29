@@ -187,7 +187,6 @@ async function saveAccessToken(config) {
 }
 
 async function getAccessToken(config) {
-  
   if (config.access_token == null) {
     var params = {
       Name: SSM_ACCESS_TOKEN_PATH + config.S3Bucket,
@@ -399,7 +398,7 @@ async function runClone(config, url) {
 
 async function buildHugo(config) {
     
-    if (config.RequestType != null && config.GitCloneSuccess && config.DeploymentType != null && config.DeploymentType.length > 0 && config.DeploymentType.startsWith("Hugo")) {
+    if (!config.GitParimaStaticDeployed && config.RequestType != null && config.GitCloneSuccess && config.DeploymentType != null && config.DeploymentType.length > 0 && config.DeploymentType.startsWith("Hugo")) {
         log("building Hugo site");
         var command = "hugo --source " + config.TempDirectory + " --debug";
         
@@ -440,14 +439,6 @@ async function syncFiles(config) {
             }
 
             promises.push(putS3Object(config, file, s3key, contentType));
-            
-            if (key.endsWith("index.html")) {
-              s3key = s3key.replace("/index.html", "");
-
-              if (s3key != config.WebsiteVersion) {
-                promises.push(putS3Object(config, file, s3key, contentType));
-              }
-            }
           }
         }
       }

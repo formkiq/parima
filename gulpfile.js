@@ -21,10 +21,18 @@ function buildDeploymentZip(cb) {
     cb();
 }
 
-function buildCertificateZip(cb) {
-    return gulp.src('./build/certificate.js')
+function buildCfCertificateZip(cb) {
+    return gulp.src('./build/cf_certificate.js')
      	.pipe(rename("index.js"))
-        .pipe(zip('certificate.zip'))
+        .pipe(zip('cf_certificate.zip'))
+        .pipe(gulp.dest('build'));
+    cb();
+}
+
+function buildRedirectsZip(cb) {
+    return gulp.src('./build/redirects.js')
+      .pipe(rename("index.js"))
+        .pipe(zip('redirects.zip'))
         .pipe(gulp.dest('build'));
     cb();
 }
@@ -33,19 +41,24 @@ function buildCloudFormation(cb) {
 
   var deployment = fs.readFileSync("src/js/deployment.js", "utf8");
 	var verifyEmailIdentity = fs.readFileSync("build/verifyEmailIdentity.js", "utf8");
+  var redirects = fs.readFileSync("build/redirects.zip").toString('base64');
+  var cf_lambda = fs.readFileSync("build/cf_lambda.js", "utf8");
   
 	var config = {
-  	"version":"v1.2",
+  	"version":"v1.3",
     "deployment_hash":hashFiles.sync({files:['./src/js/deployment.js']}),
     "certificate_hash":hashFiles.sync({files:['./src/js/certificate.js']}),
-  	"verifyEmailIdentity":verifyEmailIdentity
+  	"verifyEmailIdentity":verifyEmailIdentity,
+    "cf_lambda":cf_lambda,
+    "redirects":redirects,
+    "awsregion":"{{awsregion}}"
   }
 
 	return gulp.src(['src/yml/*.yml'])
   	.pipe(replace({global:config}))
-  	.pipe(gulp.dest('.'))
+  	.pipe(gulp.dest('build'))
 
 	cb();
 }
 
-exports.default = gulp.series(buildUglify, buildCloudFormation, buildDeploymentZip, buildCertificateZip)
+exports.default = gulp.series(buildUglify, buildDeploymentZip, buildCfCertificateZip, buildRedirectsZip, buildCloudFormation)

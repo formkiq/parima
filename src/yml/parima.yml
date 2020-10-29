@@ -4,10 +4,6 @@ Description: Parima {{version}} - Launch Your Website using AWS in Minutes (http
 
 Parameters:
 
-  # NotificationEmail:
-  #   Type: String
-  #   Description: Optional. Email address that is sent website update notifications
-  #   Default: ""
   DomainName:
     Type: String
     Description: Optional. Required for custom domain, e.g. www.yourcompany.com
@@ -31,13 +27,13 @@ Parameters:
     Default: ""    
   DeploymentType:
     Type: String
-    Description: Optional. Deployment methology to use
+    Description: Optional. Deployment methology to use options - static, Hugo0.76.3
     Default: "static"
     AllowedValues: 
       - "static"
       - "Hugo0.76.3"
   Caching:
-    Description: Required. Caching Stategy used (see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-cache-policies.html)
+    Description: Required. Caching Stategy options - Managed-CachingDisabled, Managed-CachingOptimized, Managed-CachingOptimizedForUncompressedObjects (see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-cache-policies.html)
     Default: "Managed-CachingDisabled"
     Type: String
     AllowedValues:
@@ -53,49 +49,6 @@ Mappings:
       ID: 658327ea-f89d-4fab-a63d-7e88639e58f6
     Managed-CachingOptimizedForUncompressedObjects:
       ID: b2884449-e4de-46a7-ac36-70bc7f1ddd6d
-  RegionMap: 
-    us-east-1:
-      BUCKET: formkiq-distribution-us-east-1-core
-    us-east-2:
-      BUCKET: formkiq-distribution-us-east-2-core     
-    us-west-1:
-      BUCKET: formkiq-distribution-us-west-1-core
-    us-west-2:
-      BUCKET: formkiq-distribution-us-west-2-core
-    ca-central-1:
-      BUCKET: formkiq-distribution-ca-central-1-core
-    af-south-1:
-      BUCKET: formkiq-distribution-af-south-1-core
-    ap-east-1:
-      BUCKET: formkiq-distribution-ap-east-1-core
-    ap-south-1:
-      BUCKET: formkiq-distribution-ap-south-1-core
-    ap-northeast-3:
-      BUCKET: formkiq-distribution-ap-northeast-3-core
-    ap-northeast-2:
-      BUCKET: formkiq-distribution-ap-northeast-2-core
-    ap-southeast-1:
-      BUCKET: formkiq-distribution-ap-southeast-1-core
-    ap-southeast-2:
-      BUCKET: formkiq-distribution-ap-southeast-2-core
-    ap-northeast-1:
-      BUCKET: formkiq-distribution-ap-northeast-1-core
-    eu-central-1:
-      BUCKET: formkiq-distribution-eu-central-1-core
-    eu-west-1:
-      BUCKET: formkiq-distribution-eu-west-1-core
-    eu-west-2:
-      BUCKET: formkiq-distribution-eu-west-2-core
-    eu-south-1:
-      BUCKET: formkiq-distribution-eu-south-1-core
-    eu-west-3:
-      BUCKET: formkiq-distribution-eu-west-3-core
-    eu-north-1:
-      BUCKET: formkiq-distribution-eu-north-1-core
-    me-south-1:
-      BUCKET: formkiq-distribution-me-south-1-core
-    sa-east-1:
-      BUCKET: formkiq-distribution-sa-east-1-core
   DeploymentTypeMap:
     "static":
       IMAGE: parima/layers/layer-hugo-0.76.3.zip
@@ -104,7 +57,6 @@ Mappings:
 
 Conditions:
   HasCertificate: !Not [ !Equals [ !Ref DomainName, "" ]]
-  # HasEmail: !Not [ !Equals [ !Ref NotificationEmail, "" ]]
   NoCertificate: !Equals [ !Ref DomainName, "" ]
   StaticDeployment: !Equals [ !Ref DeploymentType, "static" ]
   HasGitRepository: !Not [ !Equals [ !Ref GitRepositoryUrl, "" ]]
@@ -166,6 +118,9 @@ Resources:
             QueryString: false
           TargetOriginId: s3origin
           ViewerProtocolPolicy: redirect-to-https
+          LambdaFunctionAssociations:
+            - EventType: origin-request
+              LambdaFunctionARN: !GetAtt CloudFrontRedirectLambda.FunctionArnVersion
         DefaultRootObject: index.html
         Enabled: true
         HttpVersion: http2
@@ -208,6 +163,9 @@ Resources:
             QueryString: false
           TargetOriginId: s3origin
           ViewerProtocolPolicy: redirect-to-https
+          LambdaFunctionAssociations:
+            - EventType: origin-request
+              LambdaFunctionARN: !GetAtt CloudFrontRedirectLambda.FunctionArnVersion
         DefaultRootObject: index.html
         Enabled: true
         HttpVersion: http2
@@ -226,48 +184,6 @@ Resources:
     Properties:
       CloudFrontOriginAccessIdentityConfig:
         Comment: !Sub 'CloudFront for Parima ${S3Bucket}'
-
-  # Create an IAM user with Access Keys to enable automated deployment of the website to this bucket
-  PublishUser:
-    Type: 'AWS::IAM::User'
-    Properties:
-      Tags:
-      - Key: "Application"
-        Value: "Parima"
-
-  PublishGroup:
-    Type: AWS::IAM::Group
-    Properties:
-      Policies:
-      - PolicyName: !Sub 'publish-to-${S3Bucket}'
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            Action:
-            - s3:ListBucket
-            Resource:
-            - !Sub 'arn:aws:s3:::${S3Bucket}'            
-          - Effect: Allow
-            Action:
-            - s3:GetObject
-            - s3:PutObject
-            - s3:ListObjectsV2
-            Resource:
-            - !Sub 'arn:aws:s3:::${S3Bucket}'
-            - !Sub 'arn:aws:s3:::${S3Bucket}/*'
-
-  AddPublishUserToPublishGroup:
-    Type: AWS::IAM::UserToGroupAddition
-    Properties:
-      GroupName: !Ref PublishGroup
-      Users:
-      - !Ref PublishUser
-
-  PublishCredentials:
-    Type: 'AWS::IAM::AccessKey'
-    Properties:
-      UserName: !Ref PublishUser
 
   DeploymentLambdaResource:
     Type: Custom::DeploymentLambda
@@ -328,38 +244,30 @@ Resources:
             Resource: '*'
 
   CertificateLambda:
-    Type: AWS::Lambda::Function
+    Type: AWS::Serverless::Function
     Condition: HasCertificate
     Properties:
       Runtime: nodejs12.x
-      Timeout: '300'
+      Timeout: 300
       Handler: index.handler
       Role: !GetAtt CertificateLambdaRole.Arn
-      Environment:
-        Variables:
-          HASH: {{certificate_hash}}
       Tags:
-        - Key: "Application"
-          Value: "Parima"
-      Code:
-        S3Bucket: !FindInMap [RegionMap, !Ref "AWS::Region", BUCKET]
-        S3Key: "parima/v1.2/certificate.zip"
+        Application: Parima
+      CodeUri: cf_certificate.zip
 
   LayerDeployment:
-    Type: AWS::Serverless::LayerVersion
+    Type: AWS::Serverless::Application
     Properties:
-      Description: Lambda Layer containing Deployment build binary
-      ContentUri: 
-        Bucket: !FindInMap [RegionMap, !Ref "AWS::Region", BUCKET]
-        Key: !FindInMap [DeploymentTypeMap, !Ref DeploymentType, IMAGE]
+      Location:
+        SemanticVersion: 0.76.3
+        ApplicationId: arn:aws:serverlessrepo:{{awsregion}}:622653865277:applications/Hugo-Layer
 
   LayerGit:
-    Type: AWS::Serverless::LayerVersion
+    Type: AWS::Serverless::Application
     Properties:
-      Description: Lambda Layer containing Git binary
-      ContentUri: 
-        Bucket: !FindInMap [RegionMap, !Ref "AWS::Region", BUCKET]
-        Key: "parima/layers/layer-git-2.28.0.zip"
+      Location:
+        ApplicationId: arn:aws:serverlessrepo:{{awsregion}}:622653865277:applications/Git-Layer
+        SemanticVersion: 2.28.0
 
   DeploymentLambda:
     Type: AWS::Serverless::Function
@@ -369,13 +277,12 @@ Resources:
       MemorySize: 512
       Handler: index.handler
       Role: !GetAtt DeploymentLambdaRole.Arn
-      Layers: !If [StaticDeployment, [!Ref LayerGit], [!Ref LayerDeployment, !Ref LayerGit]]
+      Layers: !If [StaticDeployment, [!GetAtt LayerGit.Outputs.LayerArn], [!GetAtt LayerDeployment.Outputs.LayerArn, !GetAtt LayerGit.Outputs.LayerArn]]
       Tags:
         Application: "Parima"
       Environment:
         Variables:
           STACK_NAME: !Ref 'AWS::StackName'
-          HASH: {{deployment_hash}}
       Events:
         WebhookGet:
           Type: HttpApi
@@ -389,9 +296,7 @@ Resources:
             ApiId: !Ref WebhookApi
             Path: /webhook
             Method: post
-      CodeUri:
-        Bucket: !FindInMap [RegionMap, !Ref "AWS::Region", BUCKET]
-        Key: "parima/v1.2/deployment.zip"
+      CodeUri: deployment.zip
   
   WebhookApi:
     Type: AWS::Serverless::HttpApi
@@ -429,6 +334,7 @@ Resources:
             - logs:CreateLogGroup
             - logs:CreateLogStream
             - logs:PutLogEvents
+            - cloudformation:CreateChangeSet            
             - cloudformation:DescribeStacks
             - cloudformation:UpdateStack
             - iam:GetRole
@@ -447,67 +353,98 @@ Resources:
             Resource:
             - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/formkiq/parima/*"
 
-  # VerifyEmailIdentity:
-  #   Type: Custom::VerifyEmailIdentity
-  #   Condition: HasEmail
-  #   Properties:
-  #     ServiceToken: !GetAtt VerifyEmailIdentityLambda.Arn
-  #     Email: !Ref NotificationEmail
+  CloudFrontRedirectLambda:
+    Type: Custom::CreateLambda
+    Properties:
+      ServiceToken: !GetAtt LambdaInstall.Arn
+      Region: us-east-1
+      Runtime: nodejs12.x
+      Timeout: '30'
+      Handler: index.handler
+      MemorySize: 256
+      Role: !GetAtt CloudFrontRedirectLambdaRole.Arn
+      Tags:
+        - Key: "Application"
+          Value: "Parima"
+      Code:
+        ZipFile: '{{redirects}}'
 
-  # VerifyEmailIdentityLambda:
-  #   Type: AWS::Lambda::Function
-  #   Condition: HasEmail
-  #   Properties:
-  #     Runtime: nodejs12.x
-  #     Timeout: '300'
-  #     Handler: index.handler
-  #     Role: !GetAtt VerifyEmailIdentityLambdaRole.Arn
-  #     Tags:
-  #       - Key: "Application"
-  #         Value: "Parima"
-  #     Code:
-  #       ZipFile: |
-  #         {{verifyEmailIdentity}}
+  CloudFrontRedirectLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+              - edgelambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
 
-  # VerifyEmailIdentityLambdaRole:
-  #   Type: AWS::IAM::Role
-  #   Condition: HasEmail
-  #   Properties:
-  #     AssumeRolePolicyDocument:
-  #       Version: '2012-10-17'
-  #       Statement:
-  #       - Effect: Allow
-  #         Principal:
-  #           Service:
-  #             - lambda.amazonaws.com
-  #         Action:
-  #           - sts:AssumeRole
-  #     Path: "/"
-  #     Policies:
-  #     - PolicyName: root
-  #       PolicyDocument:
-  #         Version: '2012-10-17'
-  #         Statement:
-  #         - Effect: Allow
-  #           Action:
-  #           - logs:CreateLogGroup
-  #           - logs:CreateLogStream
-  #           - logs:PutLogEvents              
-  #           - ses:DeleteIdentity
-  #           - ses:VerifyEmailIdentity
-  #           Resource: '*'
+  LambdaInstall:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: nodejs12.x
+      Timeout: '300'
+      Handler: index.handler
+      Role: !GetAtt LambdaInstallRole.Arn
+      Tags:
+        - Key: "Application"
+          Value: "Parima"
+      Code:
+        ZipFile: '{{cf_lambda}}'
+
+  LambdaInstallRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: lambdainstall
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - lambda:CreateFunction
+            - lambda:GetFunction
+            - lambda:UpdateFunctionCode
+            - lambda:DeleteFunction
+            - lambda:ListVersionsByFunction
+            - iam:PassRole
+            - s3:GetObject
+            Resource: '*'
 
 Outputs:
   Certificate:
     Condition: HasCertificate
     Description: 'Certificate'
     Value: !GetAtt Certificate.CertificateArn
-  AccessKeyId:
-    Description: 'S3 Access Key'
-    Value: !Ref PublishCredentials
-  AccessKeySecret:
-    Description: 'S3 Secret Key'
-    Value: !GetAtt PublishCredentials.SecretAccessKey
   WebsiteUrl:
     Description: 'Website Url'
     Value: !If [HasCertificate, !Sub "https://${DomainName}", !Sub "https://${CloudFrontDistribution.DomainName}"]

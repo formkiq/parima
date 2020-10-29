@@ -1,0 +1,61 @@
+{
+    "Records": [
+        {
+            "cf": {
+                "config": {
+                    "distributionDomainName": "d1qdjr92dcrh4v.cloudfront.net",
+                    "distributionId": "E32FIRNM30QO6H",
+                    "eventType": "origin-request",
+                    "requestId": "PJjlrP6S4lt3O2fHbyNJRRHKeZHB_-6dGOqJbV2b-93zALJrZ4l_pQ=="
+                },
+                "request": {
+                    "body": {
+                        "action": "read-only",
+                        "data": "",
+                        "encoding": "base64",
+                        "inputTruncated": false
+                    },
+                    "clientIp": "104.246.140.89",
+                    "headers": {
+                        "host": [
+                            {
+                                "key": "Host",
+                                "value": "parima2-s3bucket-1ihmt2g0suoa4.s3.us-east-2.amazonaws.com"
+                            }
+                        ],
+                        "x-forwarded-for": [
+                            {
+                                "key": "X-Forwarded-For",
+                                "value": "104.246.140.89"
+                            }
+                        ],
+                        "user-agent": [
+                            {
+                                "key": "User-Agent",
+                                "value": "Amazon CloudFront"
+                            }
+                        ],
+                        "via": [
+                            {
+                                "key": "Via",
+                                "value": "1.1 efeaaf8a78488aa6e7da4fd885f5c8da.cloudfront.net (CloudFront)"
+                            }
+                        ]
+                    },
+                    "method": "GET",
+                    "origin": {
+                        "s3": {
+                            "authMethod": "origin-access-identity",
+                            "customHeaders": {},
+                            "domainName": "parima2-s3bucket-1ihmt2g0suoa4.s3.us-east-2.amazonaws.com",
+                            "path": "/v1",
+                            "region": "us-east-2"
+                        }
+                    },
+                    "querystring": "",
+                    "uri": "/"
+                }
+            }
+        }
+    ]
+}
