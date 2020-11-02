@@ -1,0 +1,16 @@
+{
+    "RequestType": "Create",
+    "ServiceToken": "arn:aws:lambda:us-east-2:111111111111:function:parima-CertificateLambda-1SWLKCV7LIBSE",
+    "ResponseURL": "http://localhost:9001/responseURL",
+    "StackId": "arn:aws:cloudformation:us-east-2:111111111111:stack/parima/2d7085e0-13a6-11eb-8119-06104a04a202",
+    "RequestId": "743106d3-3860-47b3-9f47-61c239734baf",
+    "LogicalResourceId": "Certificate",
+    "ResourceType": "Custom::Certificate",
+    "ResourceProperties": {
+        "ServiceToken": "arn:aws:lambda:us-east-2:111111111111:function:parima-CertificateLambda-1SWLKCV7LIBSE",
+        "OutputParameter": "Certificate",
+        "DomainName": "useast2.tryformkiq2.com",
+        "Region": "us-east-1",
+        "StackName": "parima"
+    }
+}

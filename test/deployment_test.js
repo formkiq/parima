@@ -116,7 +116,10 @@ describe('Deployment', async()  => {
 		assert.equal("SUCCESS", body.Status);
 		assert.ok(!body.Data.CreateInvalidation);
 
-		let obj = await new AWS.S3().getObject({Bucket: 'parima', Key: 'f965eb19c/parima.yml'}).promise();
+		var command = "git --git-dir /tmp/git/.git log --format=\"%H\" -n 1";
+		var version = execSync(command).toString().substring(0,9);
+
+		let obj = await new AWS.S3().getObject({Bucket: 'parima', Key: version + '/parima.yml'}).promise();
 		assert.ok(obj.Body.toString().includes("Launch Your Website using AWS in Minutes"));
 	});
 

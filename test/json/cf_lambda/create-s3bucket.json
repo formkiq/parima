@@ -1,0 +1,28 @@
+{
+    "RequestType": "Create",
+    "ServiceToken": "arn:aws:lambda:us-east-2:622653865277:function:parima-LambdaInstall-12GZ8C5I7I95B",
+    "ResponseURL": "http://localhost:9001/responseURL",
+    "StackId": "arn:aws:cloudformation:us-east-2:622653865277:stack/parima/aecebea0-1594-11eb-a6e1-0611fd7a7fc8",
+    "RequestId": "52e3173d-ce27-4bc6-bb82-6a00005ceece",
+    "LogicalResourceId": "CloudFrontRedirectLambda",
+    "ResourceType": "Custom::CreateLambda",
+    "ResourceProperties": {
+        "ServiceToken": "arn:aws:lambda:us-east-2:622653865277:function:parima-LambdaInstall-12GZ8C5I7I95B",
+        "Role": "arn:aws:iam::622653865277:role/parima-CloudFrontRedirectLambdaRole-1XK848KMX6I3Z",
+        "Runtime": "nodejs12.x",
+        "Timeout": "300",
+        "Region": "us-east-1",
+        "MemorySize":"256",
+        "Handler": "index.handler",
+        "Code": {
+            "S3Bucket": "formkiq-distribution-us-east-2-core",
+            "S3Key": "parima/v1.3/redirects.zip"
+        },
+        "Tags": [
+            {
+                "Value": "Parima",
+                "Key": "Application"
+            }
+        ]
+    }
+}

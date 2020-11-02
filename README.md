@@ -1,4 +1,4 @@
-<img src="images/parima.png" alt="Parima">
+![Parima Logo](https://raw.githubusercontent.com/formkiq/parima/master/images/parima.png)
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -36,8 +36,8 @@ Parima creates a simple, serverless architecture for your web site, using Amazon
 
 # How It Works
 
-<img src="images/aws.png" alt="AWS Services">
-
+![AWS Services](https://raw.githubusercontent.com/formkiq/parima/master/images/aws.png)
+    
 Parima installs into your AWS Account using CloudFormation (through the Console or AWS CLI).
 
 CloudFormation sets up an S3 bucket to hold the artifacts of the website, as well as CloudFront to host the website in Amazon's content delivery network (CDN). Optionally, if a Domain/Hosted Zone is specified, a Certificate and Route 53 DNS entries are created for your custom domain.
@@ -54,6 +54,14 @@ CloudFormation sets up an S3 bucket to hold the artifacts of the website, as wel
 Parima is set up to handle multiple versions of a website and easily switch between them. This CloudFormation parameter control which version of the website is active. By default a **v1** version is created. This means that you need to upload all your website contents to the **v1** directory inside of S3. 
 
 Creating a **v2** version of your website is very easy. Upload your website contents to a **v2** directory and then run the CloudFormation script and specify **v2** in the **WebsiteVersion** parameter. This will tell CloudFront to serve files in the **v2** directory. If you want to switch baack to **v1**, just run the CloudFormation again and specify **v1** as the **WebsiteVersion**. Running CloudFormation to update will not overwrite any of your existing files.
+
+### Caching
+The Caching Stategy used: Managed-CachingDisabled, Managed-CachingOptimized, Managed-CachingOptimizedForUncompressedObjects, see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-cache-policies.html for more detail description.
+
+### DeploymentType
+The type of website deployment to use.
+- static - The website deployed is static and no special logic or build process is required.
+- Hugo0.76.3 - Build the website using Hugo 0.76.3 before deployed.
 
 ### HostedZone & DomainName (Optional)
 By default, CloudFront generates a random URL to access your website, such as https://*abcdefg99*.cloudfront.net.
@@ -79,26 +87,22 @@ The Parima CloudFormation generates the following outputs:
 Using the links below to install Parima with one click.
 |Region|CloudFormation Url|
 |--------------|--------------------------|
-| us-east-1 |  https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://formkiq-distribution-us-east-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| us-east-2 |  https://us-east-2.console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/create/review?templateURL=https://formkiq-distribution-us-east-2-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| us-west-1 |  https://us-west-1.console.aws.amazon.com/cloudformation/home?region=us-west-1#/stacks/create/review?templateURL=https://formkiq-distribution-us-west-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| us-west-2 |  https://us-west-2.console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/review?templateURL=https://formkiq-distribution-us-west-2-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| af-south-1 |  https://af-south-1.console.aws.amazon.com/cloudformation/home?region=af-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-af-south-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| ap-east-1 |  https://ap-east-1.console.aws.amazon.com/cloudformation/home?region=ap-east-1#/stacks/create/review?templateURL=https://formkiq-distribution-ap-east-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| ap-northeast-1 |  https://ap-northeast-1.console.aws.amazon.com/cloudformation/home?region=ap-northeast-1#/stacks/create/review?templateURL=https://formkiq-distribution-ap-northeast-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| ap-northeast-2 |  https://ap-northeast-2.console.aws.amazon.com/cloudformation/home?region=ap-northeast-2#/stacks/create/review?templateURL=https://formkiq-distribution-ap-northeast-2-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| ap-south-1 |  https://ap-south-1.console.aws.amazon.com/cloudformation/home?region=ap-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-ap-south-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| ap-southeast-1 |  https://ap-southeast-1.console.aws.amazon.com/cloudformation/home?region=ap-southeast-1#/stacks/create/review?templateURL=https://formkiq-distribution-ap-southeast-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| ap-southeast-2 |  https://ap-southeast-2.console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/create/review?templateURL=https://formkiq-distribution-ap-southeast-2-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| ca-central-1 |  https://ca-central-1.console.aws.amazon.com/cloudformation/home?region=ca-central-1#/stacks/create/review?templateURL=https://formkiq-distribution-ca-central-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| eu-central-1 |  https://eu-central-1.console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/create/review?templateURL=https://formkiq-distribution-eu-central-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| eu-north-1 |  https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/review?templateURL=https://formkiq-distribution-eu-north-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| eu-south-1 |  https://eu-south-1.console.aws.amazon.com/cloudformation/home?region=eu-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-eu-south-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| eu-west-1 |  https://eu-west-1.console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks/create/review?templateURL=https://formkiq-distribution-eu-west-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| eu-west-2 |  https://eu-west-2.console.aws.amazon.com/cloudformation/home?region=eu-west-2#/stacks/create/review?templateURL=https://formkiq-distribution-eu-west-2-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| eu-west-3 |  https://eu-west-3.console.aws.amazon.com/cloudformation/home?region=eu-west-3#/stacks/create/review?templateURL=https://formkiq-distribution-eu-west-3-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| me-south-1 |  https://me-south-1.console.aws.amazon.com/cloudformation/home?region=me-south-1#/stacks/create/review?templateURL=https://formkiq-distribution-me-south-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
-| sa-east-1 |  https://sa-east-1.console.aws.amazon.com/cloudformation/home?region=sa-east-1#/stacks/create/review?templateURL=https://formkiq-distribution-sa-east-1-core.s3.amazonaws.com/parima/v1.2/parima.yml&stackName=parima |
+| us-east-1 |  https://us-east-1.console.aws.amazon.com/lambda/home?region=us-east-1#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| us-east-2 |  https://us-east-2.console.aws.amazon.com/lambda/home?region=us-east-2#/create/app?applicationId=arn:aws:serverlessrepo:us-east-2:622653865277:applications/FormKiQ-Parima |
+| us-west-1 |  https://us-west-1.console.aws.amazon.com/lambda/home?region=us-west-1#/create/app?applicationId=arn:aws:serverlessrepo:us-west-1:622653865277:applications/FormKiQ-Parima |
+| us-west-2 |  https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/create/app?applicationId=arn:aws:serverlessrepo:us-west-2:622653865277:applications/FormKiQ-Parima |
+| ap-northeast-1 |  https://ap-northeast-1.console.aws.amazon.com/lambda/home?region=ap-northeast-1#/create/app?applicationId=arn:aws:serverlessrepo:ap-northeast-1:622653865277:applications/FormKiQ-Parima |
+| ap-northeast-2 |  https://ap-northeast-2.console.aws.amazon.com/lambda/home?region=ap-northeast-2#/create/app?applicationId=arn:aws:serverlessrepo:ap-northeast-2:622653865277:applications/FormKiQ-Parima |
+| ap-south-1 |  https://ap-south-1.console.aws.amazon.com/lambda/home?region=ap-south-1#/create/app?applicationId=arn:aws:serverlessrepo:ap-south-1:622653865277:applications/FormKiQ-Parima |
+| ap-southeast-1 |  https://ap-southeast-1.console.aws.amazon.com/lambda/home?region=ap-southeast-1#/create/app?applicationId=arn:aws:serverlessrepo:ap-southeast-1:622653865277:applications/FormKiQ-Parima |
+| ap-southeast-2 |  https://ap-southeast-2.console.aws.amazon.com/lambda/home?region=ap-southeast-2#/create/app?applicationId=arn:aws:serverlessrepo:ap-southeast-2:622653865277:applications/FormKiQ-Parima |
+| ca-central-1 |  https://ca-central-1.console.aws.amazon.com/lambda/home?region=ca-central-1#/create/app?applicationId=arn:aws:serverlessrepo:ca-central-1:622653865277:applications/FormKiQ-Parima |
+| eu-central-1 |  https://eu-central-1.console.aws.amazon.com/lambda/home?region=eu-central-1#/create/app?applicationId=arn:aws:serverlessrepo:eu-central-1:622653865277:applications/FormKiQ-Parima |
+| eu-north-1 |  https://eu-north-1.console.aws.amazon.com/lambda/home?region=eu-north-1#/create/app?applicationId=arn:aws:serverlessrepo:eu-north-1:622653865277:applications/FormKiQ-Parima |
+| eu-west-1 |  https://eu-west-1.console.aws.amazon.com/lambda/home?region=eu-west-1#/create/app?applicationId=arn:aws:serverlessrepo:eu-west-1:622653865277:applications/FormKiQ-Parima |
+| eu-west-2 |  https://eu-west-2.console.aws.amazon.com/lambda/home?region=eu-west-2#/create/app?applicationId=arn:aws:serverlessrepo:eu-west-2:622653865277:applications/FormKiQ-Parima |
+| eu-west-3 |  https://eu-west-3.console.aws.amazon.com/lambda/home?region=eu-west-3#/create/app?applicationId=arn:aws:serverlessrepo:eu-west-3:622653865277:applications/FormKiQ-Parima |
+| sa-east-1 |  https://sa-east-1.console.aws.amazon.com/lambda/home?region=sa-east-1#/create/app?applicationId=arn:aws:serverlessrepo:sa-east-1:622653865277:applications/FormKiQ-Parima |
 
 ## Using AWS CLI 
 Assumes you have the AWS CLI [configured](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html).
