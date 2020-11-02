@@ -1,6 +1,11 @@
 # Parima Releases #
 
-##3 Version 1.2 (Oct 23, 2020)
+### Version 1.3 (Nov 1, 2020)
+- [Pull 9](https://github.com/formkiq/parima/pull/9)
+ * Added LambdaEdge Lambda for CloudFront for handling URLs that do not end in index.html
+ * Added Support for installing Parima through [AWS Serverless Application Repository](https://aws.amazon.com/serverless/serverlessrepo/) 
+ 
+### Version 1.2 (Oct 23, 2020)
 - [Pull 8](https://github.com/formkiq/parima/pull/8)
  * Added Support for GitHub as website source
  * Added GitHub Webhook Urls to trigger automatic deployment
