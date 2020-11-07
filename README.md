@@ -88,21 +88,21 @@ Using the links below to install Parima with one click.
 |Region|CloudFormation Url|
 |--------------|--------------------------|
 | us-east-1 |  https://us-east-1.console.aws.amazon.com/lambda/home?region=us-east-1#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
-| us-east-2 |  https://us-east-2.console.aws.amazon.com/lambda/home?region=us-east-2#/create/app?applicationId=arn:aws:serverlessrepo:us-east-2:622653865277:applications/FormKiQ-Parima |
-| us-west-1 |  https://us-west-1.console.aws.amazon.com/lambda/home?region=us-west-1#/create/app?applicationId=arn:aws:serverlessrepo:us-west-1:622653865277:applications/FormKiQ-Parima |
-| us-west-2 |  https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/create/app?applicationId=arn:aws:serverlessrepo:us-west-2:622653865277:applications/FormKiQ-Parima |
-| ap-northeast-1 |  https://ap-northeast-1.console.aws.amazon.com/lambda/home?region=ap-northeast-1#/create/app?applicationId=arn:aws:serverlessrepo:ap-northeast-1:622653865277:applications/FormKiQ-Parima |
-| ap-northeast-2 |  https://ap-northeast-2.console.aws.amazon.com/lambda/home?region=ap-northeast-2#/create/app?applicationId=arn:aws:serverlessrepo:ap-northeast-2:622653865277:applications/FormKiQ-Parima |
-| ap-south-1 |  https://ap-south-1.console.aws.amazon.com/lambda/home?region=ap-south-1#/create/app?applicationId=arn:aws:serverlessrepo:ap-south-1:622653865277:applications/FormKiQ-Parima |
-| ap-southeast-1 |  https://ap-southeast-1.console.aws.amazon.com/lambda/home?region=ap-southeast-1#/create/app?applicationId=arn:aws:serverlessrepo:ap-southeast-1:622653865277:applications/FormKiQ-Parima |
-| ap-southeast-2 |  https://ap-southeast-2.console.aws.amazon.com/lambda/home?region=ap-southeast-2#/create/app?applicationId=arn:aws:serverlessrepo:ap-southeast-2:622653865277:applications/FormKiQ-Parima |
-| ca-central-1 |  https://ca-central-1.console.aws.amazon.com/lambda/home?region=ca-central-1#/create/app?applicationId=arn:aws:serverlessrepo:ca-central-1:622653865277:applications/FormKiQ-Parima |
-| eu-central-1 |  https://eu-central-1.console.aws.amazon.com/lambda/home?region=eu-central-1#/create/app?applicationId=arn:aws:serverlessrepo:eu-central-1:622653865277:applications/FormKiQ-Parima |
-| eu-north-1 |  https://eu-north-1.console.aws.amazon.com/lambda/home?region=eu-north-1#/create/app?applicationId=arn:aws:serverlessrepo:eu-north-1:622653865277:applications/FormKiQ-Parima |
-| eu-west-1 |  https://eu-west-1.console.aws.amazon.com/lambda/home?region=eu-west-1#/create/app?applicationId=arn:aws:serverlessrepo:eu-west-1:622653865277:applications/FormKiQ-Parima |
-| eu-west-2 |  https://eu-west-2.console.aws.amazon.com/lambda/home?region=eu-west-2#/create/app?applicationId=arn:aws:serverlessrepo:eu-west-2:622653865277:applications/FormKiQ-Parima |
-| eu-west-3 |  https://eu-west-3.console.aws.amazon.com/lambda/home?region=eu-west-3#/create/app?applicationId=arn:aws:serverlessrepo:eu-west-3:622653865277:applications/FormKiQ-Parima |
-| sa-east-1 |  https://sa-east-1.console.aws.amazon.com/lambda/home?region=sa-east-1#/create/app?applicationId=arn:aws:serverlessrepo:sa-east-1:622653865277:applications/FormKiQ-Parima |
+| us-east-2 |  https://us-east-2.console.aws.amazon.com/lambda/home?region=us-east-2#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| us-west-1 |  https://us-west-1.console.aws.amazon.com/lambda/home?region=us-west-1#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| us-west-2 |  https://us-west-2.console.aws.amazon.com/lambda/home?region=us-west-2#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| ap-northeast-1 |  https://ap-northeast-1.console.aws.amazon.com/lambda/home?region=ap-northeast-1#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| ap-northeast-2 |  https://ap-northeast-2.console.aws.amazon.com/lambda/home?region=ap-northeast-2#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| ap-south-1 |  https://ap-south-1.console.aws.amazon.com/lambda/home?region=ap-south-1#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| ap-southeast-1 |  https://ap-southeast-1.console.aws.amazon.com/lambda/home?region=ap-southeast-1#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| ap-southeast-2 |  https://ap-southeast-2.console.aws.amazon.com/lambda/home?region=ap-southeast-2#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| ca-central-1 |  https://ca-central-1.console.aws.amazon.com/lambda/home?region=ca-central-1#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| eu-central-1 |  https://eu-central-1.console.aws.amazon.com/lambda/home?region=eu-central-1#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| eu-north-1 |  https://eu-north-1.console.aws.amazon.com/lambda/home?region=eu-north-1#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| eu-west-1 |  https://eu-west-1.console.aws.amazon.com/lambda/home?region=eu-west-1#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| eu-west-2 |  https://eu-west-2.console.aws.amazon.com/lambda/home?region=eu-west-2#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| eu-west-3 |  https://eu-west-3.console.aws.amazon.com/lambda/home?region=eu-west-3#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
+| sa-east-1 |  https://sa-east-1.console.aws.amazon.com/lambda/home?region=sa-east-1#/create/app?applicationId=arn:aws:serverlessrepo:us-east-1:622653865277:applications/FormKiQ-Parima |
 
 ## Using AWS CLI 
 Assumes you have the AWS CLI [configured](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html).
