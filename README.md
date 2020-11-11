@@ -22,6 +22,8 @@ Parima is a free, open source project that has been created to allow easy publis
 
 Parima creates a simple, serverless architecture for your web site, using Amazon S3 to store the markup, code, and asset files, and AWS CloudFront to distribute the site using HTTPS. It can be installed with or without a custom domain (for custom domain requires domain DNS to be using Route53).
 
+[![Parima: How to Deploy a static website in AWS in less than 5 minutes!](https://img.youtube.com/vi/ViIP9-uRJSA/0.jpg)](https://www.youtube.com/watch?v=ViIP9-uRJSA)
+
 ## Requirements
 
 * **An Amazon Web Services (AWS) Account:** Parima requires you to have your own Amazon Web Services Virtual Private Cloud. AWS provides a generous [Free Tier](https://aws.amazon.com/free) that includes all of the products used by Parima (aside from adding an optional custom domain in Route 53).
