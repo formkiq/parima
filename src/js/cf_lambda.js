@@ -69,8 +69,12 @@ module.exports.handler = async(event, context) => {
 
 function findLatest(data) {
     var picked = data.Versions.find(o => o.Version === '$LATEST');
-    return data.Versions.find(o => o.Version != '$LATEST' && o.CodeSha256 === picked.CodeSha256);
+    var versions = data.Versions.map(o => parseInt(o.Version) || 0);
+    picked.Version = Math.max(...versions);
+    picked.FunctionArn = picked.FunctionArn.replace("$LATEST", picked.Version);
+    return picked;
 }
+
 async function getS3Object(event) {
     return new Promise((resolve, reject) => {
         if (event.ResourceProperties.Code.S3Bucket != null) {

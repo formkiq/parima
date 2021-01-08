@@ -1,5 +1,9 @@
 # Parima Releases #
 
+### Version 1.4 (Jan 7, 2020)
+ * Converted Parima to use SAM Zip file as the installation from Serverless Application Repository
+ * Fixed Lambda Custom Resource Bug
+
 ### Version 1.3 (Nov 1, 2020)
 - [Pull 9](https://github.com/formkiq/parima/pull/9)
  * Added LambdaEdge Lambda for CloudFront for handling URLs that do not end in index.html
