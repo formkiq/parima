@@ -74,7 +74,7 @@ function buildCloudFormation(cb) {
 }
 
 function buildSamZip(cb) {
-  return gulp.src(['./build/template.yml', './build/cf_certificate.zip', './build/layer-hugo-0.76.3.zip', './build/layer-git-2.29.0.zip', './build/deployment.zip'])
+  return gulp.src(['./build/template.yml', './build/cf_certificate.zip', './build/layer-hugo-0.76.3.zip', './build/layer-git-2.29.0.zip', './build/deployment.zip', './Install.md'])
     .pipe(zip('parima-v1.4.zip'))
     .pipe(gulp.dest('build'));
   cb();
